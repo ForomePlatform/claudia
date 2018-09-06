@@ -1,30 +1,21 @@
-import sys, os, traceback, logging, codecs, cgi, types
+import sys, os, traceback, logging, codecs, json
 from StringIO import StringIO
-from lxml     import etree
 from urlparse import parse_qs
 import logging.config
 
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from SocketServer import ThreadingMixIn
-
-from viewer_cards import showCard
-from viewer import showIndex
 from mongodb import connect
-#===============================================
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Handle requests in a separate thread."""
+from wsgi_mk_request import ClaudiaService
 
 #========================================
-sHServer = None
-class HServHandler(BaseHTTPRequestHandler):
-    sConfig = None
-
+class HServResponse:
+    #========================================
     sContentTypes = {
         "html":   "text/html",
         "xml":    "text/xml",
         "css":    "text/css",
-        "js":     "application/javascript", 
-        "png":     "image/png"}
+        "js":     "application/javascript",
+        "png":    "image/png",
+        "json":   "application/json"}
 
     sErrorCodes = {
         202: "202 Accepted",
@@ -37,20 +28,17 @@ class HServHandler(BaseHTTPRequestHandler):
         423: "423 Locked",
         500: "500 Internal Error"}
 
-    def makeResponse(self,
-            mode        = "html",
-            content     = None,
-            error       = None,
-            add_headers = None, 
-            without_decoding = False):
-        response_code = 200
+    def __init__(self, start_response):
+        self.mStartResponse = start_response
+
+    def makeResponse(self, mode = "html", content = None, error = None,
+            add_headers = None, without_decoding = False):
         response_status = "200 OK"
         if error is not None:
-            response_code = error
-            response_status  = self.sErrorCodes[error]
+            response_status = self.sErrorCodes[error]
         if content is not None:
             if without_decoding:
-                response_body = content
+                response_body = bytes(content)
             else:
                 response_body = content.encode("utf-8")
             response_headers = [("Content-Type", self.sContentTypes[mode]),
@@ -60,44 +48,49 @@ class HServHandler(BaseHTTPRequestHandler):
             response_headers = []
         if add_headers is not None:
             response_headers += add_headers
+        self.mStartResponse(response_status, response_headers)
+        return [response_body]
 
-        self.send_response(response_code, response_status)
-        for name, value in response_headers:
-            self.send_header(name, value)
-        self.end_headers()
-        self.wfile.write(response_body)
-        self.wfile.flush()
-        return True
+#========================================
+class HServHandler:
+    sInstance = None
 
-    def log_message(self, format, *args):
-        logging.info(("%s - - [%s] %s\n" % (self.client_address[0],
-            self.log_date_time_string(), format%args)).rstrip())
+    @classmethod
+    def init(cls, config, in_container):
+        cls.sInstance = cls(config, in_container)
 
-    def address_string(self):
-        host, port = self.client_address[:2]
-        #return socket.getfqdn(host)
-        return host
+    @classmethod
+    def request(cls, environ, start_response):
+        return cls.sInstance.processRq(environ, start_response)
+
+    def __init__(self, config, in_container):
+        self.mFileDir = config["files"]
+        self.mHtmlBase = (config["html-base"]
+            if in_container else None)
+        if self.mHtmlBase and self.mHtmlBase.endswith('/'):
+            self.mHtmlBase = self.mHtmlBase[:-1]
 
     #===============================================
-    def parseRequest(self):
-        path, q, query_string = self.path.partition('?')
+    def parseRequest(self, environ):
+        path = environ["PATH_INFO"]
+        if self.mHtmlBase and path.startswith(self.mHtmlBase):
+            path = path[len(self.mHtmlBase):]
+        if not path:
+            path = "/"
+        query_string = environ["QUERY_STRING"]
+        print('query="' + query_string + '"')
 
         query_args = dict()
         if query_string:
             for a, v in parse_qs(query_string).items():
                 query_args[a] = v[0]
 
-        if self.command == "POST":
+        if environ["REQUEST_METHOD"] == "POST":
             try:
-                form = cgi.FieldStorage(fp = self.rfile,
-                    headers = self.headers,
-                    environ = {'REQUEST_METHOD':'POST',
-                    'CONTENT_TYPE':self.headers['Content-Type']})
-                for arg in form.keys():
-                    val = form[arg]
-                    if isinstance(val, types.ListType):
-                        val = val[0]
-                    query_args[arg] = val.value.decode("utf-8")
+                rq_body_size = int(environ.get('CONTENT_LENGTH', 0))
+                rq_body = environ['wsgi.input'].read(rq_body_size)
+                for a, v in parse_qs(rq_body).items():
+                    query_args[a] = v[0].decode("utf-8")
             except Exception:
                 rep = StringIO()
                 traceback.print_exc(file = rep)
@@ -108,8 +101,8 @@ class HServHandler(BaseHTTPRequestHandler):
         return path, query_args
 
     #===============================================
-    def fileResponse(self, fname,  without_decoding):
-        fpath = self.sConfig["files"] + fname
+    def fileResponse(self, resp_h, fname,  without_decoding):
+        fpath = self.mFileDir + fname
         if not os.path.exists(fpath):
             return False
         if without_decoding:
@@ -119,63 +112,77 @@ class HServHandler(BaseHTTPRequestHandler):
             with codecs.open(fpath, "r", encoding = "utf-8") as inp:
                 content = inp.read()
         inp.close()
-        return self.makeResponse(mode = fname.rpartition('.')[2],
+        return resp_h.makeResponse(mode = fname.rpartition('.')[2],
             content = content,  without_decoding = without_decoding)
 
     #===============================================
-    def do_GET(self):
-        global sHServer
+    def processRq(self, environ, start_response):
         global mongo
+        resp_h = HServResponse(start_response)
         try:
-            path, query_args = self.parseRequest()
+            path, query_args = self.parseRequest(environ)
             if path.find('.') != -1:
-                ret = self.fileResponse(path, True)
+                ret = self.fileResponse(resp_h, path, True)
                 if ret is not False:
                     return ret
-            if path == '/index':
-                return self.makeResponse(content = showIndex(query_args,  mongo).site)
-            if (path == '/card') and ('id' in query_args):
-                return self.makeResponse(content = showCard(query_args,  mongo=mongo).site)
-            return self.makeResponse(error = 404)
+            return ClaudiaService.request(resp_h, path, query_args,  mongo)
         except Exception:
             rep = StringIO()
             traceback.print_exc(file = rep)
             log_record = rep.getvalue()
             logging.error(
                 "Exception on GET request:\n " + log_record)
-            return self.makeResponse(error = 500)
-
-    def do_POST(self):
-        return self.do_GET()
+            return resp_h.makeResponse(error = 500)
 
 #========================================
-def runHServer(config_file):
-    global sHServer
+def setupHServer(config_file, in_container):
     if not os.path.exists(config_file):
-        logging.critical("No config file provided (hserv.xml)")
+        logging.critical("No config file provided (%s)" % config_file)
         sys.exit(2)
-    config = dict()
-    with open(config_file) as inp:
-        tree = etree.parse(inp, etree.XMLParser())
-        config["version"] = tree.xpath("/conf")[0].get("version")
-        for nd in tree.xpath("/conf/*"):
-            value = nd.text.strip() if nd.text else ""
-            if nd.tag in config:
-                logging.critical("Config: duplicate property %s" % nd.tag)
-                sys.exit(1)
-            config[nd.tag] = value
-    HServHandler.sConfig = config
-    host, port = config["host"], int(config["port"])
-    server = ThreadedHTTPServer((host, port), HServHandler)
-    logging.info("HServer listening %s:%d" % (host, port))
-    server.serve_forever()
+    config = None
+    with codecs.open(config_file, "r", encoding = "utf-8") as inp:
+        content = inp.read()
+    config = json.loads(content)
+    logging_config = config.get("logging")
+    if logging_config:
+        logging.config.dictConfig(logging_config)
+        logging.basicConfig(level = 0)
+    ClaudiaService.start(config, in_container)
+    print('Start server')
+    HServHandler.init(config, in_container)
+    if not in_container:
+        return (config["host"], int(config["port"]))
+    return None
+
+#========================================
+def application(environ, start_response):
+    return HServHandler.request(environ, start_response)
 
 #========================================
 if __name__ == '__main__':
-    mongo = connect()
-    logging.basicConfig(level = 10)
+    logging.basicConfig(level = 0)
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     else:
-        config_file = "new_hserv.xml"
-    runHServer(config_file)
+        config_file = "/data/projects/Claudia/claudia/wsgi_hserv.json"
+
+    from wsgiref.simple_server import make_server, WSGIRequestHandler
+
+    #========================================
+    class _LoggingWSGIRequestHandler(WSGIRequestHandler):
+        def log_message(self, format, *args):
+            logging.info(("%s - - [%s] %s\n" %
+                (self.client_address[0], self.log_date_time_string(),
+                format % args)).rstrip())
+
+    #========================================
+    host, port = setupHServer(config_file, False)
+    httpd = make_server(host, port, application,
+        handler_class = _LoggingWSGIRequestHandler)
+    logging.info("HServer listening %s:%d" % (host, port))
+    mongo = connect()
+    httpd.serve_forever()
+else:
+    mongo = connect()
+    logging.basicConfig(level = 10)
+    setupHServer("/data/projects/Claudia/claudia/wsgi_hserv.json", True)

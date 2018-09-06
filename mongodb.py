@@ -1,5 +1,6 @@
 import sys
 import json
+import os
 from lxml import etree
 from cards import CardHandler
 from pymongo import MongoClient
@@ -12,7 +13,10 @@ taxes = [
             'MentalStatus', 
             'MI-Words', 
             'PVD-Words', 
-            'FAMILY'
+            'FAMILY', 
+            'DOSAGE', 
+            'FREQUENCY', 
+            'METHOD'
             ]
 
 # Connect to MongoDB
@@ -41,9 +45,11 @@ def update(mongo):
             doc['id'] = line.strip()
             doc['patient'] = 'patient_' + doc['id']
             doc['html'] = get("doc.html",  number_of_card=doc['id'],  from_file=True)
+            if doc['id'] == "16":
+                print('Doc16=' + str(doc))
 
             q = {"$set":  {key: doc[key] for key in doc}}
-            dbh.initial_docs.update({'id':doc['id'],  'patient': doc['patient']},  q)
+            dbh.initial_docs.update({'id':doc['id'],  'patient': doc['patient']},  q, upsert=True)
             
             # claculated
             doc = {}
@@ -57,7 +63,7 @@ def update(mongo):
             doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
             
             q = {"$set":  {key: doc[key] for key in doc}}
-            dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q)
+            dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
             print('Update document #' + doc['id'] + '.')
             
             # patients
@@ -99,7 +105,7 @@ def update(mongo):
     dbh.formulas.update({"formula": "CHF"},  formula, upsert=True)
 
 # Get arbitrary file from the database or form a file (if 'from_file' is True)
-def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None",   mongo=None):
+def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None", base="",  mongo=None):
     if from_file:
         if type == "doc.html":
             card = CardHandler(number_of_card)
@@ -115,6 +121,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             return card.key_words.split(', ')
         elif type == "ch.json":
             file_name = 'cci/chunks/ch' + number_of_card + '.json'
+            file_name = base + file_name
             try:
                 file = open(file_name,  'r')
             except IOError:
@@ -126,6 +133,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 return chunks
         elif type == "snap.json":
             snap_file_name = 'cci/snapshots/snap' + number_of_card + '.json'
+            snap_file_name = base + snap_file_name
             try:
                 snap_file  = open(snap_file_name,  'r')
             except IOError:
@@ -135,6 +143,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 return snap_file.read()
         elif type == "tax.tset":
             tax_file_name = 'cci/taxonomies/' + taxonomy + '.tset'
+            tax_file_name = base + tax_file_name
             try:
                 tax_file  = open(tax_file_name,  'r')
             except IOError:
@@ -146,6 +155,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 return res
         elif type == "tax.idx":
             tax_file_name = 'cci/indexes/' + taxonomy + '.idx'
+            tax_file_name = base + tax_file_name
             try:
                 tax_file  = open(tax_file_name,  'r')
             except IOError:
@@ -159,6 +169,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 return dict
         elif type == "code.hsir":
             code_file_name = 'cci/rules/CHF.hsir'
+            code_file_name = base + code_file_name
             try:
                 code_file  = open(code_file_name,  'r')
             except IOError:
@@ -170,6 +181,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 return code
         elif type == "code.json":
             code_file_name = 'cci/rules/CHF.json'
+            code_file_name = base + code_file_name
             try:
                 code_file  = open(code_file_name,  'r')
             except IOError:
@@ -181,7 +193,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 return code
         elif type == "all_indexes":
             try:
-                id_file = open('cci/documents/dir.list', 'r')
+                id_file = open(base + 'cci/documents/dir.list', 'r')
             except IOError:
                 print('No such file or directory: cci/documents/dir.list')
             else:

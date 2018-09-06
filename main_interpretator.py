@@ -39,7 +39,7 @@ def next_step(code,  number_of_card,  step_id,  mongo):
 #def next_step(doc_file_name,  code_file_name, snap_file_name, step_id):
     if step_id == 0:
         doc_data = create_dict(number_of_card,  mongo)
-        doc_data = INA(doc_data)
+        doc_data = INA(doc_data, mongo)
         snapshot(number_of_card,  doc_data,  mongo)
     #doc_data = get_doc_data(snap_file_name)
     doc_data = get("snap.json",  number_of_card=number_of_card,  mongo=mongo)
@@ -163,7 +163,7 @@ def pipelink(step,  doc_data,  number_of_card,  mongo):
     elif step['name'] == 'apply_sememes':
         return apply_sememes(step['arguments'][0],  doc_data,  mongo)
     elif step['name'] == 'IsNumericAnnotator':
-        return INA(doc_data)
+        return INA(doc_data, mongo)
     elif step['name'] == 'RegExpAnnotator':
         return REA(step['data'],  doc_data)
     elif step['name'] == 'snapshot':
@@ -330,8 +330,8 @@ def apply_sememes(data,  doc_data,  mongo):
     return doc_data
 
 #  Start numeric annotator for all chunks in a document.  
-def INA(doc_data):
-    return all_chunks(IsNumericAnnotator,  doc_data,  'pipelink')
+def INA(doc_data, mongo):
+    return all_chunks(IsNumericAnnotator,  doc_data, 'pipelink', mongo)
     
 #  Start regular expression annotator for all chunks in a document.  Not finished.
 #  It's absent in CHF.json.
@@ -480,6 +480,7 @@ def taxonomy(text,  par):
 
 #  Apply numeric annotator for chunk 'text'. 'Par' is a tiple of parameters.  
 def IsNumericAnnotator(text,  par):
+    mongo=par[0]
     dict = {}
     # In 'text' there is a number  
     result = re.search(r'\d',   text)
@@ -502,24 +503,24 @@ def IsNumericAnnotator(text,  par):
         dict['type'] = 'contains_number'
         dict['value'] = result.group(0)
         # Find a measure
-        try:
-            tax_file_name = 'cci/taxonomies/DOSAGE.tset'
-            tax_file = open(tax_file_name,  'r')
-        except IOError:
-            print('No such file: ' + tax_file)
-            return
-        else:
-            filtre = re.compile("\s+", re.M + re.I + re.U)
-            for line in tax_file:
-                if line[0] != '"':
-                    continue
-                words = line.split('"')
-                end = result.end()
-                triped_text = filtre.sub(' ',  text[end:])
-                triped_word = filtre.sub(' ',  words[1])
-                #if  triped_text.find(triped_word) != -1:
-                if is_word(triped_word,  triped_text):
-                    dict['measure'] = triped_word
+        tax_file = get("tax.tset", taxonomy="DOSAGE", mongo=mongo).split('\n')
+#         try:
+#             tax_file_name = 'cci/taxonomies/DOSAGE.tset'
+#             tax_file = open(tax_file_name,  'r')
+#         except IOError:
+#             print('No such file: ' + tax_file_name)
+#             return
+#         else:
+        filtre = re.compile("\s+", re.M + re.I + re.U)
+        for line in tax_file:
+            if line == "" or line[0] != '"':
+                continue
+            words = line.split('"')
+            end = result.end()
+            triped_text = filtre.sub(' ',  text[end:])
+            triped_word = filtre.sub(' ',  words[1])
+            if is_word(triped_word,  triped_text):
+                dict['measure'] = triped_word
         return dict
 
 #  Apply regular expression 'pattern' for 'text'.  

@@ -40,6 +40,7 @@ class showCard:
             number_of_tab = int(args['tab'])
         else:
             number_of_tab = 1
+        base = 'claudia/'
 
         # Head  
         root = objectify.Element('html')
@@ -160,7 +161,7 @@ class showCard:
             steps['card'] = number_of_card
             steps['steps'] = []
         else:
-            steps_file_name = 'cci/viewer/steps.json';
+            steps_file_name = base + 'cci/viewer/steps.json';
             try:
                 steps_file = open(steps_file_name,  'r')
             except IOError:
@@ -180,7 +181,7 @@ class showCard:
                 new_chunks = snap
                 steps['steps'].append(new_chunks)
                 i += 1
-            steps_file_name = 'cci/viewer/steps.json';
+            steps_file_name = base + 'cci/viewer/steps.json';
             steps_file = open(steps_file_name,  'w')
             steps_file.write(json.dumps(steps,  indent = 4))
             steps_file.close()

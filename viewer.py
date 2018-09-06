@@ -227,7 +227,7 @@ class showIndex:
         if filter3 == 'None':
             ids3 = ids
         else:
-            filter3_file_name = 'cci/indexes/' + filter3 + '.idx'
+            filter3_file_name = 'claudia/cci/indexes/' + filter3 + '.idx'
             try:
                 filter3_file = open(filter3_file_name,  'r')
             except IOError:
@@ -238,6 +238,10 @@ class showIndex:
                 for line in filter3_file:
                     ids3.append(line.strip())
                 filter3_file.close()
+        print('ids=' + str(ids))
+        print('ids1=' + str(ids1))
+        print('ids2=' + str(ids2))
+        print('ids3=' + str(ids3))
         
         need_list = []
         for id in ids:

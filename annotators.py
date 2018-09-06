@@ -190,9 +190,10 @@ if __name__ == '__main__':
         #print(json.dumps(doc_data,  indent=4))
         for sentence in doc_data["sentences"]:
             for chunk in sentence["chunks"]:
+                par = (mongo, )
                 for tax in taxes:
                     chunk["data"].update(taxonomy(chunk["text"],  tax,  mongo))
-                chunk["data"].update(IsNumericAnnotator(chunk["text"],  True))
+                chunk["data"].update(IsNumericAnnotator(chunk["text"],  par))
                 #print('text=' + chunk["text"])
                 #print(chunk["data"])
                 #print(json.dumps(chunk["data"],  indent=4))
