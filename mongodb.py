@@ -1,6 +1,5 @@
 import sys
 import json
-import os
 from lxml import etree
 from cards import CardHandler
 from pymongo import MongoClient
@@ -59,7 +58,7 @@ def update(mongo):
             file = get("doc.json",  number_of_card=doc['id'],  from_file=True)
             doc['json'] = json.dumps(file,  indent=4)
             doc['chunks'] = get("ch.json",  number_of_card=doc['id'],  from_file=True)
-            doc['snapshot'] = get("snap.json",  number_of_card=doc['id'],  from_file=True)
+            #doc['snapshot'] = get("snap.json",  number_of_card=doc['id'],  from_file=True)
             doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
             
             q = {"$set":  {key: doc[key] for key in doc}}
@@ -79,8 +78,7 @@ def update(mongo):
     for tax in taxes:
         taxonomy = {}
         taxonomy['taxonomy'] = tax
-        #taxonomy['tset'] = get("tax.tset",  taxonomy=tax,  from_file=True)
-        taxonomy['idx'] = get("tax.idx",  taxonomy=tax,  from_file=True)
+        #taxonomy['idx'] = get("tax.idx",  taxonomy=tax,  from_file=True)
 
         q = {"$set": {key: taxonomy[key] for key in taxonomy}}
         dbh.indexes.update({'taxonomy': tax},  q,  upsert=True)
