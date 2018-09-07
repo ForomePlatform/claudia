@@ -6,7 +6,7 @@ from mongodb import put
 
 from mongodb import connect
 from main_interpretator import create_dict
-from main_interpretator import IsNumericAnnotator
+from main_annotators import IsNumericAnnotator
 
 #  There are certain annotators and a 'baby version' of JSON-interpretator.  
 

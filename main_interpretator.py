@@ -1,10 +1,9 @@
-import re
-import json
 import sys
 from lxml import etree
 from mongodb import get
 from mongodb import put
 from mongodb import connect
+from main_annotators import IsNumericAnnotator,  taxonomy,  RegExpAnnotator
 
 #  Here there is an interpretator of JSON-code applying for decoding CHF.json  
 
@@ -22,16 +21,6 @@ from mongodb import connect
 #  **************************************************************************
 
 
-#def get_doc_data(snap_file_name):
-#    try:
-#        snap_file = open(snap_file_name,  'r')
-#    except IOError:
-#        print('No such file or directory: ' + snap_file_name)
-#    else:
-#        doc_data = json.loads(snap_file.read())
-#        snap_file.close()
-#        return doc_data
-
 #  Apply the interpretator for a step 'step_id' of JSON-code in 'code_file_name'
 #  for a document 'doc_file_name'. 'snap_file_name' is a snaphot file.
 #  It's independent with 'def all_files'.
@@ -41,18 +30,9 @@ def next_step(code,  number_of_card,  step_id,  mongo):
         doc_data = create_dict(number_of_card,  mongo)
         doc_data = INA(doc_data, mongo)
         snapshot(number_of_card,  doc_data,  mongo)
-    #doc_data = get_doc_data(snap_file_name)
     doc_data = get("snap.json",  number_of_card=number_of_card,  mongo=mongo)
     if doc_data is None:
         doc_data = create_dict(number_of_card,  mongo)
-#    try:
-#        code_file = open(code_file_name,  'r')
-#    except IOError:
-#        print('No such file or directory: ' + code_file_name)
-#    else:
-#        #level = 'entity'
-#        code = json.loads(code_file.read())
-#        code_file.close()
     for step in code['statements']:
         if 'statementId' in step and step['statementId'] == step_id:
             doc_data = json_interpretator(doc_data, number_of_card,  step,  mongo)
@@ -63,14 +43,6 @@ def next_step(code,  number_of_card,  step_id,  mongo):
 #  It's independent with 'def all_steps'.
 def all_files(mongo):
     chf = []
-    #chf_file = open('cci/indexes/ICHF.idx',  'w')
-#    try:
-#        id_file = open('cci/documents/dir.list', 'r')
-#    except IOError:
-#        print('No such file or directory: cci/documents/dir.list')
-#    else:
-#        for line in id_file:
-#            number_of_card = line.strip()
     indexes = get("all_indexes",  mongo=mongo)
     for number_of_card in indexes:
         print('Card #' + number_of_card)
@@ -116,16 +88,8 @@ def all_chunks(annotator,  doc_data, *parp):
 #  Apply 'interpretator' for all steps of JSON-code in 'json_file_name' for a document.
 #  'snap_file' is a snapshot file.  
 def all_steps(code,  interpretator,  doc_data,  number_of_card,  mongo):
-#    try:
-#        file = open(json_file_name,  'r')
-#    except IOError:
-#        print('No such file or directory: ' + json_file_name)
-#    else:
-#        #level = 'entity'
-#        code = json.loads(file.read())
-#        file.close()
-        for step in code['statements']:
-            interpretator(doc_data,  number_of_card, step,  mongo)
+    for step in code['statements']:
+        interpretator(doc_data,  number_of_card, step,  mongo)
 
 
 #  *****************************************************************
@@ -395,13 +359,6 @@ def collection_operator(data,  dict):
 
 #  Returns an annotation of a chunk.
 def annotation_data(data,  dict):
-#    if data['name'] in dict:
-#        return dict[data['name']]
-#    low = data['name'].lower()
-#    print('low:' + low)
-#    if low in dict:
-#        return dict[low]
-#    print('No')
     for key in dict:
         if data['name'].lower() == key.lower():
             return dict[key]
@@ -414,122 +371,12 @@ def annotation_data(data,  dict):
 def snapshot(number_of_card,  doc_data,  mongo):
     #file = json.dumps(doc_data,  indent = 4)
     put("snap.json",  doc_data,  number_of_card=number_of_card,  mongo=mongo)
-#    try:
-#        file = open(file_name,  'w')
-#    except IOError:
-#        print('No such file or directory: ' + file_name)
-#    else:
-#        file.write(json.dumps(doc_data,  indent = 4))
-#        file.close()
 
 #  It's like a snapshot. But I don't know the difference. Not finished.
 def watchpoint():
     pass
 
-#  **************************************************************
-#  Annotators.
-#  **************************************************************
 
-def is_word(term,  text):
-    text_low = text.lower()
-    term_low = term.lower()
-    if text_low.find(term_low) == -1:
-        return False
-    w_text = re.findall(r'\w+',  text_low)
-    w_term = re.findall(r'\w+',  term_low)
-    for word in w_term:
-        if word not in w_text:
-            return False
-    return True
-
-#  Apply a taxonomy 'tax' for chunk 'text'. 'Par' is a tiple of parameters.  
-def taxonomy(text,  par):
-    tax = par[0]
-    mongo = par[1]
-    dict = {}
-    filtre = re.compile("\s+", re.M + re.I + re.U)
-    tax_file = get("tax.tset",  taxonomy=tax,  mongo=mongo).split('\n')
-#    file = 'cci/taxonomies/' + tax + '.tset'
-#    try:
-#        tax_file = open(file,  'r')
-#    except IOError:
-#        print('No such file: ' + file)
-#        return {}
-#    else:
-    for line in tax_file:
-        if line == "" or line[0] != '"':
-            continue
-        words = line.split('"')
-        triped_text = filtre.sub(' ',  text)
-        triped_word = filtre.sub(' ',  words[1])
-        if is_word(triped_word,  triped_text):
-            dict[tax] = text
-            flag = True
-            key = ''
-            for word in words[2:]:
-                if flag:
-                    flag = False
-                    continue
-                flag = True
-                if key == '':
-                    key = filtre.sub(' ',  word)
-                else:
-                    dict[key] = filtre.sub(' ',  word)
-                    key = ''
-    return dict
-
-#  Apply numeric annotator for chunk 'text'. 'Par' is a tiple of parameters.  
-def IsNumericAnnotator(text,  par):
-    mongo=par[0]
-    dict = {}
-    # In 'text' there is a number  
-    result = re.search(r'\d',   text)
-    if result is None:
-        # There are text only  
-        res = re.search(r'[A-z]+',  text)
-        if res is not None and res.group(0) == text:
-            dict['class'] = 'numeric'
-            dict['type'] = 'text'
-            dict['value'] = text
-        return dict
-    dict['class'] = 'numeric'
-    # It is a number
-    if re.search(r'[A-z]',  text) is None:
-        dict['type'] = 'number'
-        dict['value'] = text
-        return dict
-    #  It's not a number but contains a number  
-    else:
-        dict['type'] = 'contains_number'
-        dict['value'] = result.group(0)
-        # Find a measure
-        tax_file = get("tax.tset", taxonomy="DOSAGE", mongo=mongo).split('\n')
-#         try:
-#             tax_file_name = 'cci/taxonomies/DOSAGE.tset'
-#             tax_file = open(tax_file_name,  'r')
-#         except IOError:
-#             print('No such file: ' + tax_file_name)
-#             return
-#         else:
-        filtre = re.compile("\s+", re.M + re.I + re.U)
-        for line in tax_file:
-            if line == "" or line[0] != '"':
-                continue
-            words = line.split('"')
-            end = result.end()
-            triped_text = filtre.sub(' ',  text[end:])
-            triped_word = filtre.sub(' ',  words[1])
-            if is_word(triped_word,  triped_text):
-                dict['measure'] = triped_word
-        return dict
-
-#  Apply regular expression 'pattern' for 'text'.  
-def RegExpAnnotator(text,  pattern):
-    dict = {}
-    result = re.search(pattern,  text)
-    if result is not None:
-        dict['pattern'] = pattern
-        return dict
 
 #  *******************************************************************
 #  Other.
@@ -547,15 +394,7 @@ def create_dict(number_of_card,  mongo):
     doc_data['data'] = {}
     doc_data['sentences'] = []
     sHTML_Parser = etree.HTMLParser(remove_comments = True)
-#    try:
-#        inp = open(file_name,  'rb')
-#    except IOError:
-#        print('No such file or directory: ' + file_name)
-#        return None
-#    else:
-#        doc = etree.parse(inp, sHTML_Parser)
     samples = get("doc.html",  number_of_card=number_of_card,  mongo=mongo)
-        #for sample in doc.xpath('/html/body/p'):
     for node in samples:
         sample = etree.fromstring(node)
         sentence = {}
@@ -581,6 +420,5 @@ def create_dict(number_of_card,  mongo):
 
 if __name__ == '__main__':
     mongo = connect()
-    # json_file_name = 'cci/rules/CHF.json'
     all_files(mongo)
     print('Ok.')
