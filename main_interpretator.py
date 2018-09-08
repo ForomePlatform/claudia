@@ -3,7 +3,7 @@ from lxml import etree
 from mongodb import get
 from mongodb import put
 from mongodb import connect
-from main_annotators import IsNumericAnnotator,  taxonomy,  RegExpAnnotator
+from annotators import IsNumericAnnotator,  taxonomy,  RegExpAnnotator
 
 #  Here there is an interpretator of JSON-code applying for decoding CHF.json  
 
@@ -51,7 +51,6 @@ def all_files(mongo):
         all_steps(code, json_interpretator, doc_data, number_of_card,  mongo)
         if 'ICHF' in doc_data['data']:
             chf.append(number_of_card)
-    #    id_file.close()
     put("calculated_indexes",  chf,  formula='CHF',  mongo=mongo)
     print(str(len(chf)) + ' documents were annotated by ICHF.')
 

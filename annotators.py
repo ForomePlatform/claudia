@@ -6,7 +6,7 @@ from mongodb import put
 
 from mongodb import connect
 from main_interpretator import create_dict
-from main_annotators import IsNumericAnnotator
+from annotators import IsNumericAnnotator
 
 #  There are certain annotators and a 'baby version' of JSON-interpretator.  
 
@@ -178,25 +178,18 @@ if __name__ == '__main__':
                 ]
     
 
-    
-#    json_file_name = 'cci/rules/SimpleRule1.json'
-#    json_interpretator(json_file_name)
+
 
     mongo = connect()
     indexes = get("all_indexes",  mongo=mongo)
     for number_of_card in indexes:
         print("Card: " + number_of_card)
         doc_data = create_dict(number_of_card,  mongo)
-        #print(json.dumps(doc_data,  indent=4))
         for sentence in doc_data["sentences"]:
             for chunk in sentence["chunks"]:
                 par = (mongo, )
                 for tax in taxes:
                     chunk["data"].update(taxonomy(chunk["text"],  tax,  mongo))
                 chunk["data"].update(IsNumericAnnotator(chunk["text"],  par))
-                #print('text=' + chunk["text"])
-                #print(chunk["data"])
-                #print(json.dumps(chunk["data"],  indent=4))
-        #print(json.dumps(doc_data,  indent=4))
         put("ch.json",  doc_data,  number_of_card=number_of_card,  mongo=mongo)
     print('Ok.')

@@ -23,7 +23,7 @@ def connect():
     try:
         #c = Connection(host="localhost",  port  = 27017)
         mongo = MongoClient(host="localhost",  port  = 27017)
-        print('Connection successfully')
+        print('Database connection successfully')
     except Exception:
         print("Could not connect to MongoDB")
         sys.exit(1)
@@ -44,8 +44,6 @@ def update(mongo):
             doc['id'] = line.strip()
             doc['patient'] = 'patient_' + doc['id']
             doc['html'] = get("doc.html",  number_of_card=doc['id'],  from_file=True)
-            if doc['id'] == "16":
-                print('Doc16=' + str(doc))
 
             q = {"$set":  {key: doc[key] for key in doc}}
             dbh.initial_docs.update({'id':doc['id'],  'patient': doc['patient']},  q, upsert=True)
