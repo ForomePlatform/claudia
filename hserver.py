@@ -167,6 +167,8 @@ if __name__ == '__main__':
         config_file = "/data/projects/Claudia/claudia/wsgi_hserv.json"
 
     from wsgiref.simple_server import make_server, WSGIRequestHandler
+    log_file_name = config["logging"]['handlers']['default']['filename']
+    os.remove(log_file_name)
 
     #========================================
     class _LoggingWSGIRequestHandler(WSGIRequestHandler):

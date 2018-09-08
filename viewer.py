@@ -178,7 +178,6 @@ class showIndex:
         self.site = etree.tostring(root,  pretty_print = True,  xml_declaration = True)
     
     def get_ids(self,  filter1,  filter2,  filter3,  flag1,  flag2,  flag3,  mongo):
-        print('Start get')
 #        id_file_name = 'cci/documents/dir.list'
 #        try:
 #            id_file = open(id_file_name,  'r')
@@ -238,11 +237,7 @@ class showIndex:
                 for line in filter3_file:
                     ids3.append(line.strip())
                 filter3_file.close()
-        print('ids=' + str(ids))
-        print('ids1=' + str(ids1))
-        print('ids2=' + str(ids2))
-        print('ids3=' + str(ids3))
-        
+                
         need_list = []
         for id in ids:
             if (id in ids1) == (flag1 == 'true'):

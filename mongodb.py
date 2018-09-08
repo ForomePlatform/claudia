@@ -55,7 +55,7 @@ def update(mongo):
             
             file = get("doc.json",  number_of_card=doc['id'],  from_file=True)
             doc['json'] = json.dumps(file,  indent=4)
-            doc['chunks'] = get("ch.json",  number_of_card=doc['id'],  from_file=True)
+            #doc['chunks'] = get("ch.json",  number_of_card=doc['id'],  from_file=True)
             #doc['snapshot'] = get("snap.json",  number_of_card=doc['id'],  from_file=True)
             doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
             

@@ -12,7 +12,7 @@ class ClaudiaService:
 
     @classmethod
     def request(cls, serv_h, rq_path, rq_args,  mongo):
-        if rq_path == "/index":
+        if rq_path == "/":
             return serv_h.makeResponse(
                 content = showIndex(rq_args,  mongo).site)
         if (rq_path == "/card") and ("id" in rq_args):
