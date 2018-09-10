@@ -281,7 +281,7 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
     elif type == "doc.json":
         key = 'json'
         dbh = mongo["DataSet_test"]
-        q = {"$set":  {key: file}}
+        q = {"$set":  {key: json.dumps(file)}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
     elif type == "ch.json":
         key = 'chunks'
@@ -293,7 +293,7 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         dbh = mongo["DataSet_test"]
         q = {"$set":  {key: file}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
-    if type == "tax.tset":
+    elif type == "tax.tset":
         key = 'tset'
         dbh = mongo["claudia"]
         q = {"$set":  {key: file}}

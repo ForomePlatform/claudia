@@ -9,7 +9,7 @@ json_directory = 'cci/documents' # Directory for JSON-files and file dir.list wi
 print('Decoding of csv file "' + csv_file_name + '".')
 try:
     f = open(csv_file_name,  'r')
-except FileNotFoundError:
+except IOError:
     print('File "' + csv_file_name + '" not found.')
     sys.exit()
 else:
@@ -39,16 +39,17 @@ else:
                         chf_ids.append(number_of_card)
                     key = ''
             # Record dictionary to JSON-file
-            json_file = open(json_directory + '/' + 'Doc' + number_of_card + '.json',  'w')
-            json_file.write(json.dumps({'id' : int(number_of_card),  'data' : dict},  indent=4))
-            json_file.close()
+            put("doc.json", dict, number_of_card=number_of_card)
+            #json_file = open(json_directory + '/' + 'Doc' + number_of_card + '.json',  'w')
+            #json_file.write(json.dumps({'id' : int(number_of_card),  'data' : dict},  indent=4))
+            #json_file.close()
     # Record of id of cards
     f.close()
     ids.sort()
-    id_file = open(json_directory + '/' + 'dir.list',  'w')
-    for id in ids:
-        id_file.write(str(id) + '\n')
-    id_file.close()
+#    id_file = open(json_directory + '/' + 'dir.list',  'w')
+#    for id in ids:
+#        id_file.write(str(id) + '\n')
+#    id_file.close()
     print(str(len(chf_ids))+ ' documents apriory have diagnosis CHF.')
     put('results_apriory',  chf_ids,  formula = 'CHF')
 #    for id in chf_ids:
