@@ -77,6 +77,7 @@ class HServHandler:
             path = path[len(self.mHtmlBase):]
         if not path:
             path = "/"
+	print('path = "' + path + '"')
         query_string = environ["QUERY_STRING"]
         print('query="' + query_string + '"')
 
@@ -164,11 +165,11 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     else:
-        config_file = "/data/projects/Claudia/claudia/wsgi_hserv.json"
+        config_file = "claudia.json"
 
     from wsgiref.simple_server import make_server, WSGIRequestHandler
-    log_file_name = config["logging"]['handlers']['default']['filename']
-    os.remove(log_file_name)
+    #log_file_name = config["logging"]['handlers']['default']['filename']
+    #os.remove(log_file_name)
 
     #========================================
     class _LoggingWSGIRequestHandler(WSGIRequestHandler):
@@ -187,4 +188,4 @@ if __name__ == '__main__':
 else:
     mongo = connect()
     logging.basicConfig(level = 10)
-    setupHServer("/data/projects/Claudia/claudia/wsgi_hserv.json", True)
+    setupHServer("claudia/claudia.json", True)

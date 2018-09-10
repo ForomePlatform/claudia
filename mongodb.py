@@ -22,7 +22,7 @@ taxes = [
 def connect():
     try:
         #c = Connection(host="localhost",  port  = 27017)
-        mongo = MongoClient(host="localhost",  port  = 27017)
+        mongo = MongoClient(host="localhost",  port  = 27017, connect=False)
         print('Database connection successfully')
     except Exception:
         print("Could not connect to MongoDB")
