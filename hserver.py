@@ -77,7 +77,7 @@ class HServHandler:
             path = path[len(self.mHtmlBase):]
         if not path:
             path = "/"
-	print('path = "' + path + '"')
+        print('path = "' + path + '"')
         query_string = environ["QUERY_STRING"]
         print('query="' + query_string + '"')
 

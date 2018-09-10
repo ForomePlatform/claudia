@@ -55,8 +55,6 @@ def update(mongo):
             
             file = get("doc.json",  number_of_card=doc['id'],  from_file=True)
             doc['json'] = json.dumps(file,  indent=4)
-            #doc['chunks'] = get("ch.json",  number_of_card=doc['id'],  from_file=True)
-            #doc['snapshot'] = get("snap.json",  number_of_card=doc['id'],  from_file=True)
             doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
             
             q = {"$set":  {key: doc[key] for key in doc}}
@@ -76,7 +74,6 @@ def update(mongo):
     for tax in taxes:
         taxonomy = {}
         taxonomy['taxonomy'] = tax
-        #taxonomy['idx'] = get("tax.idx",  taxonomy=tax,  from_file=True)
 
         q = {"$set": {key: taxonomy[key] for key in taxonomy}}
         dbh.indexes.update({'taxonomy': tax},  q,  upsert=True)
@@ -101,7 +98,7 @@ def update(mongo):
     dbh.formulas.update({"formula": "CHF"},  formula, upsert=True)
 
 # Get arbitrary file from the database or form a file (if 'from_file' is True)
-def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None", base="",  mongo=None):
+def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None", base="",  mongo=connect()):
     if from_file:
         if type == "doc.html":
             card = CardHandler(number_of_card)
@@ -198,6 +195,25 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                     number_of_card = line.strip()
                     indexes.append(number_of_card)
                 return indexes
+        elif type == "results_apriory":
+            try:
+                id_file = open(base + 'cci/indexes/' + formula + '-diagnosed.idx' , 'r')
+            except IOError:
+                print('No such file or directory: ' + base + 'cci/indexes/' + formula + '-diagnosed.idx')
+            else:
+                indexes = []
+                for line in id_file:
+                    number_of_card = line.strip()
+                    indexes.append(number_of_card)
+                return indexes
+        elif type == "steps.json":
+            try:
+                steps_file = open(base + 'cci/viewer/steps.json' , 'r')
+            except IOError:
+                print('No such file or directory: ' +base + 'cci/viewer/steps.json')
+            else:
+                steps = json.loads(steps_file)
+                return steps
 
     else:
         if mongo is None:
@@ -246,9 +262,17 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             dbh = mongo["DataSet_test"]
             indexes = dbh.formula_results.find_one({"formula": formula})
             return indexes["indexes"]
+        elif type == "results_apriory":
+            dbh = mongo["DataSet_test"]
+            results = dbh.results_apriory.find_one({"formula": formula})
+            return results["indexes"]
+        elif type == "steps.json":
+            dbh = mongo["DataSet_test"]
+            results = dbh.steps.find_one({"formula": formula})
+            return results["indexes"]
 
 # Put any file to the database
-def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=None):
+def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=connect()):
     if type == "doc.html":
         key = 'html'
         dbh = mongo["DataSet_test"]
@@ -294,6 +318,16 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         dbh = mongo["DataSet_test"]
         q = {"$set":  {key: file}}
         dbh.formula_results.update({'formula': formula},  q,  upsert=True)
+    elif type == "results_apriory":
+        key = 'indexes'
+        dbh = mongo["DataSet_test"]
+        q = {"$set":  {key: file}}
+        dbh.results_apriory.update({'formula': formula},  q,  upsert=True)
+    elif type == "steps.json":
+        key = 'indexes'
+        dbh = mongo["DataSet_test"]
+        q = {"$set":  {key: file}}
+        dbh.steps.update({'formula': formula},  q,  upsert=True)
 
 if __name__ == '__main__':
     c = connect()

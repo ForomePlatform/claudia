@@ -1,8 +1,7 @@
 import re
-import json
 from lxml import etree
 from lxml import objectify
-from mongodb import get
+from mongodb import get,  put
 from main_interpretator import next_step
 
 taxes = [
@@ -40,7 +39,6 @@ class showCard:
             number_of_tab = int(args['tab'])
         else:
             number_of_tab = 1
-        base = 'claudia/'
 
         # Head  
         root = objectify.Element('html')
@@ -110,13 +108,6 @@ class showCard:
         div2.set('class',  'code')
         
         code = get("code.json",  formula="CHF",  mongo=mongo)
-#            try:
-#                code_file_name = 'cci/rules/CHF.json'
-#                code_file = open(code_file_name, 'r')
-#            except IOError:
-#                print('No such file or directory: ' + code_file_name)
-#            else:
-#                code = json.loads(code_file.read())
         filtre = re.compile("\s+", re.M + re.I + re.U)
         n=1
         if new_step > len(code['sourceStatements']):
@@ -161,15 +152,16 @@ class showCard:
             steps['card'] = number_of_card
             steps['steps'] = []
         else:
-            steps_file_name = base + 'cci/viewer/steps.json';
-            try:
-                steps_file = open(steps_file_name,  'r')
-            except IOError:
-                print('No such directory: ' + steps_file_name)
-                return
-            else:
-                steps = json.loads(steps_file.read())
-                steps_file.close()
+            steps = get("steps.json",  mongo=mongo)
+#            steps_file_name = base + 'cci/viewer/steps.json';
+#            try:
+#                steps_file = open(steps_file_name,  'r')
+#            except IOError:
+#                print('No such directory: ' + steps_file_name)
+#                return
+#            else:
+#                steps = json.loads(steps_file.read())
+#                steps_file.close()
         if new_step < len(steps['steps']):
             new_chunks = steps['steps'][new_step]
         else:
@@ -181,10 +173,11 @@ class showCard:
                 new_chunks = snap
                 steps['steps'].append(new_chunks)
                 i += 1
-            steps_file_name = base + 'cci/viewer/steps.json';
-            steps_file = open(steps_file_name,  'w')
-            steps_file.write(json.dumps(steps,  indent = 4))
-            steps_file.close()
+            put("steps.json",  steps,  mongo=mongo)
+#            steps_file_name = base + 'cci/viewer/steps.json';
+#            steps_file = open(steps_file_name,  'w')
+#            steps_file.write(json.dumps(steps,  indent = 4))
+#            steps_file.close()
         if step != -1:
             previous_chunks = steps['steps'][step]
         else:

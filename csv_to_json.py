@@ -2,9 +2,10 @@
 
 import json
 import sys
+from mongodb import put
 
-csv_file_name = sys.argv[1] # CSV-file  
-json_directory = sys.argv[2] # Directory for JSON-files and file dir.list with id of cards
+csv_file_name = 'cci/data/TrainingCases2016-11-16.txt' # CSV-file  
+json_directory = 'cci/documents' # Directory for JSON-files and file dir.list with id of cards
 print('Decoding of csv file "' + csv_file_name + '".')
 try:
     f = open(csv_file_name,  'r')
@@ -13,19 +14,18 @@ except FileNotFoundError:
     sys.exit()
 else:
     ids = [] # List of id of cards
-    chf = 0
-    chf_file = open('cci/indexes/CHF-diagnosed.idx',  'w')
+    #chf_file = open('cci/indexes/CHF-diagnosed.idx',  'w')
     chf_ids = []
     for line in f:
         card = line.split('\t')
         try:
-            number_of_card = int(card[0])
+            number_of_card = card[0]
+            ids.append(int(number_of_card))
         except ValueError:
             # print('This is not a card of a patient.')
             continue
         else:
-            print('Card #' + str(number_of_card))
-            ids.append(number_of_card)
+            print('Card #' + number_of_card)
             # Read every card and record to a dictionary  
             dict = {}
             key = ''
@@ -36,12 +36,11 @@ else:
                 else:
                     dict[key] = field
                     if key == "CHF - diagnosed":
-                        chf += 1
                         chf_ids.append(number_of_card)
                     key = ''
             # Record dictionary to JSON-file
-            json_file = open(json_directory + '/' + 'Doc' + str(number_of_card) + '.json',  'w')
-            json_file.write(json.dumps({'id' : number_of_card,  'data' : dict},  indent=4))
+            json_file = open(json_directory + '/' + 'Doc' + number_of_card + '.json',  'w')
+            json_file.write(json.dumps({'id' : int(number_of_card),  'data' : dict},  indent=4))
             json_file.close()
     # Record of id of cards
     f.close()
@@ -50,8 +49,9 @@ else:
     for id in ids:
         id_file.write(str(id) + '\n')
     id_file.close()
-    print(str(chf) + ' documents apriory have diagnosis CHF.')
-    for id in chf_ids:
-        chf_file.write(str(id) + '\n')
-    chf_file.close()
+    print(str(len(chf_ids))+ ' documents apriory have diagnosis CHF.')
+    put('results_apriory',  chf_ids,  formula = 'CHF')
+#    for id in chf_ids:
+#        chf_file.write(str(id) + '\n')
+#    chf_file.close()
 print('OK.')

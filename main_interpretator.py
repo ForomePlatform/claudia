@@ -392,7 +392,7 @@ def create_dict(number_of_card,  mongo):
     doc_data = {}
     doc_data['data'] = {}
     doc_data['sentences'] = []
-    sHTML_Parser = etree.HTMLParser(remove_comments = True)
+    #sHTML_Parser = etree.HTMLParser(remove_comments = True)
     samples = get("doc.html",  number_of_card=number_of_card,  mongo=mongo)
     for node in samples:
         sample = etree.fromstring(node)

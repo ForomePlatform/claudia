@@ -60,13 +60,6 @@ def is_word(term,  text):
 def taxonomy(text,  tax,  mongo):
     dict = {}
     filtre = re.compile("\s+", re.M + re.I + re.U)
-#    file_name = 'cci/taxonomies/' + tax + '.tset'
-#    try:
-#        tax_file = open(file_name,  'r')
-#    except IOError:
-#        print('No such file: ' + file_name)
-#        return {}
-#    else:
     tax_file = get("tax.tset",  taxonomy=tax,  mongo=mongo)
     lines = tax_file.split('\n')
     for line in lines:
@@ -89,7 +82,6 @@ def taxonomy(text,  tax,  mongo):
                 else:
                     dict[key] = filtre.sub(' ',  word)
                     key = ''
-#        tax_file.close()
     return dict
 
 #  'Baby version' of the interpretator. It was realised for SimpleRule1.json.  

@@ -195,48 +195,29 @@ class showIndex:
             ids1 = ids
         else:
             ids1 = get("tax.idx",  taxonomy=filter1,  mongo=mongo)
-#            filter1_file_name = 'cci/indexes/' + filter1 + '.idx'
-#        try:
-#            filter1_file = open(filter1_file_name,  'r')
-#        except IOError:
-#            print('No such file or directory: ' + filter1_file_name)
-#            return None
-#        else:
-#            ids1 = []
-#            for line in filter1_file:
-#                ids1.append(int(line))
-#            filter1_file.close()
             
         if filter2 == 'None':
             ids2 = ids
         else:
             ids2 = get("calculated_indexes",  formula="CHF",  mongo=mongo)
-#            filter2_file_name = 'cci/indexes/' + filter2 + '.idx'
-#        try:
-#            filter2_file = open(filter2_file_name,  'r')
-#        except IOError:
-#            print('No such file or directory: ' + filter2_file_name)
-#            return None
-#        else:
-#            ids2 = []
-#            for line in filter2_file:
-#                ids2.append(int(line))
-#            filter2_file.close()
+
         
         if filter3 == 'None':
             ids3 = ids
         else:
-            filter3_file_name = 'claudia/cci/indexes/' + filter3 + '.idx'
-            try:
-                filter3_file = open(filter3_file_name,  'r')
-            except IOError:
-                print('No such file or directory: ' + filter3_file_name)
-                return None
-            else:
-                ids3 = []
-                for line in filter3_file:
-                    ids3.append(line.strip())
-                filter3_file.close()
+            ids3 = get("results_apriory",  formula="CHF",  mongo=mongo)
+        print('ids3=' + str(ids3))
+#            filter3_file_name = 'claudia/cci/indexes/' + filter3 + '.idx'
+#            try:
+#                filter3_file = open(filter3_file_name,  'r')
+#            except IOError:
+#                print('No such file or directory: ' + filter3_file_name)
+#                return None
+#            else:
+#                ids3 = []
+#                for line in filter3_file:
+#                    ids3.append(line.strip())
+#                filter3_file.close()
                 
         need_list = []
         for id in ids:
