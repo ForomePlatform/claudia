@@ -21,32 +21,55 @@ filter3 = [
             'None', 
             'CHF-diagnosed'
             ]
+
+def intersection(list1,  list2):
+    res = []
+    for el in list1:
+        if el in list2:
+            res.append(el)
+    return res
+
+def union(list1,  list2):
+    res = []
+    for el in list1:
+        if el not in list2:
+            res.append(el)
+    res.extend(list2)
+    return res
+    
+def difference(list1,  list2):
+    res = []
+    for el in list1:
+        if el not in list2:
+            res.append(el)
+    return res
+
 class showIndex:
     def __init__(self,  args,  mongo):
         if 'tax' in args:
             tax_selected = args['tax']
         else:
             tax_selected = 'None'
-        if 'filter2_selected' in args:
-            filter2_selected = args['filter2_selected']
-        else:
-            filter2_selected = 'None'
-        if 'filter3_selected' in args:
-            filter3_selected = args['filter3_selected']
-        else:
-            filter3_selected = 'None'
+#        if 'filter2_selected' in args:
+#            filter2_selected = args['filter2_selected']
+#        else:
+#            filter2_selected = 'None'
+#        if 'filter3_selected' in args:
+#            filter3_selected = args['filter3_selected']
+#        else:
+#            filter3_selected = 'None'
         if 'flag1' in args:
             flag1 = args['flag1']
         else:
             flag1 = 'false'
-        if 'flag2' in args:
-            flag2 = args['flag2']
-        else:
-            flag2 = 'false'
-        if 'flag3' in args:
-            flag3 = args['flag3']
-        else:
-            flag3 = 'false'
+#        if 'flag2' in args:
+#            flag2 = args['flag2']
+#        else:
+#            flag2 = 'false'
+#        if 'flag3' in args:
+#            flag3 = args['flag3']
+#        else:
+#            flag3 = 'false'
         if 'selected' in args:
             selected = args['selected'].split('*')[1:]
         else:
@@ -101,16 +124,11 @@ class showIndex:
                     ids3 = ids
                 else:
                     ids3 = get('results_apriory',  formula='CHF',  mongo=mongo)
-                list = []
-                for el in ids2:
-                    if el in ids3:
-                        list.append(el)
+                list = intersection(ids2,  ids3)
                 td.i = len(list)
                 if couple in selected:
                     td.set('class',  'cell_selected')
-                    for id in list:
-                        if id not in need_list:
-                            need_list.append(id)
+                    need_list = union(need_list,  list)
                 else:
                     td.set('class',  'ordinary_cell')
         number_list = []
@@ -120,6 +138,12 @@ class showIndex:
         need_list = []
         for number in number_list:
             need_list.append(str(number))
+        
+        reset = objectify.SubElement(menu,  'div')
+        reset.button = 'Reset all filters'
+        reset.button.set('class',  'button')
+        reset.set('id',  'reset')
+        reset.set('onclick',  'reset();')
             
 #        keys = objectify.SubElement(menu,  'div')
 #        keys.b = 'Choose a filter:'
@@ -203,6 +227,14 @@ class showIndex:
 #            select.append(option)
         # Open the file with id of documents  
         #ids = self.get_ids(tax_selected,  filter2_selected,  filter3_selected,  flag1,  flag2,  flag3,  mongo)
+        if tax_selected == 'None':
+            ids1 = ids
+        else:
+            ids1 = get("tax.idx",  taxonomy=tax_selected,  mongo=mongo)
+        if flag1 == 'false':
+            need_list = intersection(need_list,  ids1)
+        else:
+            need_list = difference(need_list,  ids1)
         count = objectify.SubElement(menu,  'p')
         count.b = str(len(need_list)) + ' cards were found.'
         if len(need_list) == 0:
@@ -228,41 +260,73 @@ class showIndex:
         td2.set('valign',  'top')
         td2.set('align',  'center')
         # This paragraph will be a frame with data of cards  
-        card = objectify.SubElement(td2,  'p')
+        card = objectify.SubElement(td2,  'div')
         card.set('id',  'card')
         card.set('class',  'click')
         card.em = 'Click an element in left list in order to open a medical card.'
+        
+        # Panel of filters
+        filters_panel = objectify.SubElement(td2,  'div')
+        filters_panel.set('class',  'filters_panel')
+        keys = objectify.SubElement(filters_panel,  'div')
+        keys.b = 'Choose a filter:'
+        # row-data
+        row_data = objectify.SubElement(filters_panel,  'div')
+        row_data.set('class',  'filters')
+        row_data.div = 'Row-data:'
+        row_data.div.set('class',  'filter_name')
+        check = objectify.SubElement(row_data,  'div')
+        check.input = 'NOT'
+        check.input.set('type',  'checkbox')
+        check.input.set('id',  'filter_check1')
+        check.input.set('onchange',  'filter();')
+        if flag1 == 'true':
+            check.input.set('checked',  'checked')
+        check.set('class',  'tax_check')
+        select = objectify.SubElement(row_data,  'select')
+        select.set('class',  'select')
+        select.set('id',  'select1')
+        select.set('onchange',  'filter();')
+        option = etree.fromstring('<option>' + tax_selected + '</option>')
+        option.set('value',  tax_selected)
+        select.append(option)
+        for tax in taxes:
+            if tax == tax_selected:
+                continue
+            option = etree.fromstring('<option>'+tax+'</option>')
+            option.set('value',  tax)
+            select.append(option)
         # Print to file  
         objectify.deannotate(root)
         etree.cleanup_namespaces(root)
         self.site = etree.tostring(root,  pretty_print = True,  xml_declaration = True)
     
-    def get_ids(self,  filter1,  filter2,  filter3,  flag1,  flag2,  flag3,  mongo):
-        ids = get("all_indexes",  mongo=mongo)
-        
-        if filter1 == 'None':
-            ids1 = ids
-        else:
-            ids1 = get("tax.idx",  taxonomy=filter1,  mongo=mongo)
-            
-        if filter2 == 'None':
-            ids2 = ids
-        else:
-            ids2 = get("calculated_indexes",  formula="CHF",  mongo=mongo)
-
-        
-        if filter3 == 'None':
-            ids3 = ids
-        else:
-            ids3 = get("results_apriory",  formula="CHF",  mongo=mongo)
-                
-        need_list = []
-        for id in ids:
-            if (id in ids1) == (flag1 == 'true'):
-                continue
-            if (id in ids2) == (flag2 == 'true'):
-                continue
-            if (id in ids3) == (flag3 == 'true'):
-                continue
-            need_list.append(id)
-        return need_list
+#    def get_ids(self,  filter1,  filter2,  filter3,  flag1,  flag2,  flag3,  mongo):
+#        ids = get("all_indexes",  mongo=mongo)
+#        
+#        if filter1 == 'None':
+#            ids1 = ids
+#        else:
+#            ids1 = get("tax.idx",  taxonomy=filter1,  mongo=mongo)
+#            
+#        if filter2 == 'None':
+#            ids2 = ids
+#        else:
+#            ids2 = get("calculated_indexes",  formula="CHF",  mongo=mongo)
+#
+#        
+#        if filter3 == 'None':
+#            ids3 = ids
+#        else:
+#            ids3 = get("results_apriory",  formula="CHF",  mongo=mongo)
+#                
+#        need_list = []
+#        for id in ids:
+#            if (id in ids1) == (flag1 == 'true'):
+#                continue
+#            if (id in ids2) == (flag2 == 'true'):
+#                continue
+#            if (id in ids3) == (flag3 == 'true'):
+#                continue
+#            need_list.append(id)
+#        return need_list
