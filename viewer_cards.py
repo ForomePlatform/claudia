@@ -119,11 +119,14 @@ class showCard:
             s = re.sub('>',  '&gt;',  s)
             if s == '' or s == ' ' or s[0] == '/':
                 continue
-            p = etree.fromstring('<p>' + s + '</p>')
+            p = etree.fromstring('<p><b>' + str(n) + '. </b>'+ s + '</p>')
             if n == new_step:
                 p.set('class',  'step_selected')
             else:
-                p.set('class',  'step_not_selected')
+                if n % 2 == 0:
+                    p.set('class',  'step_not_selected')
+                else:
+                    p.set('class',  'step_zebra')
             p.set('id',  'step' + str(n))
             p.set('onclick',  'change_step('+str(n)+');')
             div2.append(p)
@@ -153,15 +156,6 @@ class showCard:
             steps['steps'] = []
         else:
             steps = get("steps.json",  mongo=mongo)
-#            steps_file_name = base + 'cci/viewer/steps.json';
-#            try:
-#                steps_file = open(steps_file_name,  'r')
-#            except IOError:
-#                print('No such directory: ' + steps_file_name)
-#                return
-#            else:
-#                steps = json.loads(steps_file.read())
-#                steps_file.close()
         if new_step < len(steps['steps']):
             new_chunks = steps['steps'][new_step]
         else:
@@ -174,10 +168,6 @@ class showCard:
                 steps['steps'].append(new_chunks)
                 i += 1
             put("steps.json",  steps,  mongo=mongo)
-#            steps_file_name = base + 'cci/viewer/steps.json';
-#            steps_file = open(steps_file_name,  'w')
-#            steps_file.write(json.dumps(steps,  indent = 4))
-#            steps_file.close()
         if step != -1:
             previous_chunks = steps['steps'][step]
         else:
@@ -242,7 +232,6 @@ class showCard:
                 n += 1
             all_chunks.append(p)
             
-        #print('Change = ' + str(changed_chunks))
         if new_step == 0:
             label_text = 'In order to run the programm click to any step of the code.'
         else:
@@ -260,22 +249,10 @@ class showCard:
         div.set('class',  'start')
         div.b = 'Step #' + str(new_step);
         div.b.set('id',  'ann_step')
-#            div.button = 'Next step'
-#            div.button.set('class',  'button')
-#            div.button.set('value',  str(new_step))
-#            div.button.set('id',  'start')
-#            div.button.set('onclick',  'steps();')
         div2 = objectify.SubElement(apply_anns ,  'div')
         div2.set('class',  'code')
         
         code = get("code.json",  formula="CHF",  mongo=mongo)
-#            try:
-#                code_file_name = 'cci/rules/CHF.json'
-#                code_file = open(code_file_name, 'r')
-#            except IOError:
-#                print('No such file or directory: ' + code_file_name)
-#            else:
-#                code = json.loads(code_file.read())
         filtre = re.compile("\s+", re.M + re.I + re.U)
         n=1
         if new_step > len(code['sourceStatements']):
@@ -287,11 +264,14 @@ class showCard:
             s = re.sub('>',  '&gt;',  s)
             if s == '' or s == ' ' or s[0] == '/':
                 continue
-            p = etree.fromstring('<p>' + s + '</p>')
+            p = etree.fromstring('<p><b>' + str(n) + '. </b>' + s + '</p>')
             if n == new_step:
                 p.set('class',  'step_selected')
             else:
-                p.set('class',  'step_not_selected')
+                if n % 2 == 0:
+                    p.set('class',  'step_not_selected')
+                else:
+                    p.set('class',  'step_zebra')
             # p.set('onclick',  'change_step(' + str(n) + ');')
             p.set('id',  'ann_step' + str(n))
             p.set('onclick',  'change_ann_step('+str(n)+');')
@@ -323,16 +303,21 @@ class showCard:
         br2 = objectify.SubElement(tab,  'br')
         
         div_by_step = objectify.SubElement(tab,  'div')
-        if new_step == 0:
-            p = etree.fromstring('<b>Press any step of the programm in order to see document annotations.</b>')
-        else:
-            p = etree.fromstring('<b>After this step the document has next annotations:</b>')
+#        if new_step == 0:
+#            p = etree.fromstring('''<b>Press any step of the programm 
+#                    in order to see document annotations.</b>''')
+#        else:
+#            p = etree.fromstring('''<b>After this step the 
+#                    document has next annotations:</b>''')
+        p = etree.fromstring('<b>The document has following annotations:</b>')
         div_by_step.append(p)
-        if len(new_chunks['data']) == 0 and new_step != 0:
+        annotations = get('annotations',  number_of_card=number_of_card,  
+                formula='CHF',  mongo=mongo)
+        if len(annotations) == 0 and new_step != 0:
             div_by_step.p = 'None'
         else:
-            for el in new_chunks['data']:
-                s = str(el)  + ': ' + str(new_chunks['data'][el])
+            for el in annotations:
+                s = str(el)  + ': ' + str(annotations[el])
                 p = etree.fromstring('<p>' + s + '</p>')
                 print(p.text)
                 div_by_step.append(p)

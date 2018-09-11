@@ -49,6 +49,8 @@ def all_files(mongo):
         doc_data = create_dict(number_of_card,  mongo)
         code = get("code.json", formula="CHF", mongo=mongo)
         all_steps(code, json_interpretator, doc_data, number_of_card,  mongo)
+        put("annotations",  doc_data['data'],  
+                number_of_card=number_of_card, formula ='CHF',  mongo=mongo)
         if 'ICHF' in doc_data['data']:
             chf.append(number_of_card)
     put("calculated_indexes",  chf,  formula='CHF',  mongo=mongo)

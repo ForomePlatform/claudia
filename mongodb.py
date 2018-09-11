@@ -270,6 +270,10 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             dbh = mongo["DataSet_test"]
             results = dbh.steps.find_one({"formula": formula})
             return results["indexes"]
+        elif type == "annotations":
+            dbh = mongo['DataSet_test']
+            annotations = dbh.calculated_docs.find_one({'id': number_of_card,  'formula': formula})
+            return annotations["annotations"]
 
 # Put any file to the database
 def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=connect()):
@@ -328,6 +332,12 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         dbh = mongo["DataSet_test"]
         q = {"$set":  {key: file}}
         dbh.steps.update({'formula': formula},  q,  upsert=True)
+    elif type == "annotations":
+        key = 'annotations'
+        dbh = mongo["DataSet_test"]
+        q = {"$set":  {key: file}}
+        dbh.calculated_docs.update({'id': number_of_card,  
+                'formula':formula},  q,  upsert=True)
 
 if __name__ == '__main__':
     c = connect()

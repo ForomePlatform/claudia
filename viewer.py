@@ -266,7 +266,7 @@ class showIndex:
         card.em = 'Click an element in left list in order to open a medical card.'
         
         # Panel of filters
-        filters_panel = objectify.SubElement(td2,  'div')
+        filters_panel = objectify.SubElement(card,  'div')
         filters_panel.set('class',  'filters_panel')
         keys = objectify.SubElement(filters_panel,  'div')
         keys.b = 'Choose a filter:'
