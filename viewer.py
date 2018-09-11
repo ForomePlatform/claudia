@@ -47,6 +47,10 @@ class showIndex:
             flag3 = args['flag3']
         else:
             flag3 = 'false'
+        if 'selected' in args:
+            selected = args['selected'].split('*')[1:]
+        else:
+            selected = []
         # Head  
         root = objectify.Element('html')
         head = objectify.SubElement(root, 'head')
@@ -61,101 +65,157 @@ class showIndex:
         # Left part of page  
         td1 = objectify.SubElement(body,  'div')
         td1.set('class',  'left_column')
-        # Filter  
+        # Filters
         menu = objectify.SubElement(td1,  'div')
         menu.set('class',  'menu')
-        keys = objectify.SubElement(menu,  'div')
-        keys.b = 'Choose a filter:'
-        # row-data
-        row_data = objectify.SubElement(menu,  'div')
-        row_data.set('class',  'filters')
-        row_data.div = 'Row-data:'
-        row_data.div.set('class',  'filter_name')
-        check = objectify.SubElement(row_data,  'div')
-        check.input = 'NOT'
-        check.input.set('type',  'checkbox')
-        check.input.set('id',  'filter_check1')
-        check.input.set('onchange',  'filter();')
-        if flag1 == 'true':
-            check.input.set('checked',  'checked')
-        check.set('class',  'tax_check')
-        select = objectify.SubElement(row_data,  'select')
-        select.set('class',  'select')
-        select.set('id',  'select1')
-        select.set('onchange',  'filter();')
-        option = etree.fromstring('<option>' + tax_selected + '</option>')
-        option.set('value',  tax_selected)
-        select.append(option)
-        for tax in taxes:
-            if tax == tax_selected:
-                continue
-            option = etree.fromstring('<option>'+tax+'</option>')
-            option.set('value',  tax)
-            select.append(option)
-        # calculated
-        calculated= objectify.SubElement(menu,  'div')
-        calculated.set('class',  'filters')
-        calculated.div = 'Calculated:'
-        calculated.div.set('class',  'filter_name')
-        check = objectify.SubElement(calculated,  'div')
-        check.input = 'NOT'
-        check.input.set('type',  'checkbox')
-        check.input.set('id',  'filter_check2')
-        check.input.set('onchange',  'filter();')
-        check.set('class',  'tax_check')
-        if flag2 == 'true':
-            check.input.set('checked',  'checked')
-        select = objectify.SubElement(calculated,  'select')
-        select.set('class',  'select')
-        select.set('id',  'select2')
-        select.set('onchange',  'filter();')
-        option = etree.fromstring('<option>' + filter2_selected + '</option>')
-        option.set('value',  filter2_selected)
-        select.append(option)
-        for opt in filter2:
-            if opt == filter2_selected:
-                continue
-            option = etree.fromstring('<option>'+opt+'</option>')
-            option.set('value',  opt)
-            select.append(option)
-        # known
-        known = objectify.SubElement(menu,  'div')
-        known.set('class',  'filters')
-        known.div = 'Known:'
-        known.div.set('class',  'filter_name')
-        check = objectify.SubElement(known,  'div')
-        check.input = 'NOT'
-        check.input.set('type',  'checkbox')
-        check.input.set('id',  'filter_check3')
-        check.input.set('onchange',  'filter();')
-        check.set('class',  'tax_check')
-        if flag3 == 'true':
-            check.input.set('checked',  'checked')
-        select = objectify.SubElement(known,  'select')
-        select.set('class',  'select')
-        select.set('id',  'select3')
-        select.set('onchange',  'filter();')
-        option = etree.fromstring('<option>' + filter3_selected + '</option>')
-        option.set('value',  filter3_selected)
-        select.append(option)
-        for opt in filter3:
-            if opt == filter3_selected:
-                continue
-            option = etree.fromstring('<option>'+opt+'</option>')
-            option.set('value',  opt)
-            select.append(option)
+        
+        # Pivot table
+        pivot = objectify.SubElement(menu,  'table')
+        pivot.set('class',  'pivote_table')
+        tr = objectify.SubElement(pivot,  'tr')
+        td = objectify.SubElement(tr,  'td')
+        td.set('class',  'key_cell')
+        ids = get('all_indexes',  mongo=mongo)
+        need_list = []
+        for column in filter3:
+            td= objectify.SubElement(tr,  'td')
+            td.set('class',  'key_cell')
+            td.b = column
+        for row in filter2:
+            tr = objectify.SubElement(pivot,  'tr')
+            td = objectify.SubElement(tr,  'td')
+            td.set('class',  'key_cell')
+            td.b = row
+            for column in filter3:
+                i = filter2.index(row)
+                j = filter3.index(column)
+                couple = str(i) + '_' + str(j)
+                td = objectify.SubElement(tr,  'td')
+                td.set('onclick',  'renew_list("cell' + couple +'");')
+                td.set('id',  'cell' + couple)
+                if row == 'None':
+                    ids2 = ids
+                else:
+                    ids2 = get('calculated_indexes',  formula='CHF',  mongo=mongo)
+                if column == 'None':
+                    ids3 = ids
+                else:
+                    ids3 = get('results_apriory',  formula='CHF',  mongo=mongo)
+                list = []
+                for el in ids2:
+                    if el in ids3:
+                        list.append(el)
+                td.i = len(list)
+                if couple in selected:
+                    td.set('class',  'cell_selected')
+                    for id in list:
+                        if id not in need_list:
+                            need_list.append(id)
+                else:
+                    td.set('class',  'ordinary_cell')
+        number_list = []
+        for id in need_list:
+            number_list.append(int(id))
+        number_list.sort()
+        need_list = []
+        for number in number_list:
+            need_list.append(str(number))
+            
+#        keys = objectify.SubElement(menu,  'div')
+#        keys.b = 'Choose a filter:'
+#        # row-data
+#        row_data = objectify.SubElement(menu,  'div')
+#        row_data.set('class',  'filters')
+#        row_data.div = 'Row-data:'
+#        row_data.div.set('class',  'filter_name')
+#        check = objectify.SubElement(row_data,  'div')
+#        check.input = 'NOT'
+#        check.input.set('type',  'checkbox')
+#        check.input.set('id',  'filter_check1')
+#        check.input.set('onchange',  'filter();')
+#        if flag1 == 'true':
+#            check.input.set('checked',  'checked')
+#        check.set('class',  'tax_check')
+#        select = objectify.SubElement(row_data,  'select')
+#        select.set('class',  'select')
+#        select.set('id',  'select1')
+#        select.set('onchange',  'filter();')
+#        option = etree.fromstring('<option>' + tax_selected + '</option>')
+#        option.set('value',  tax_selected)
+#        select.append(option)
+#        for tax in taxes:
+#            if tax == tax_selected:
+#                continue
+#            option = etree.fromstring('<option>'+tax+'</option>')
+#            option.set('value',  tax)
+#            select.append(option)
+#        # calculated
+#        calculated= objectify.SubElement(menu,  'div')
+#        calculated.set('class',  'filters')
+#        calculated.div = 'Calculated:'
+#        calculated.div.set('class',  'filter_name')
+#        check = objectify.SubElement(calculated,  'div')
+#        check.input = 'NOT'
+#        check.input.set('type',  'checkbox')
+#        check.input.set('id',  'filter_check2')
+#        check.input.set('onchange',  'filter();')
+#        check.set('class',  'tax_check')
+#        if flag2 == 'true':
+#            check.input.set('checked',  'checked')
+#        select = objectify.SubElement(calculated,  'select')
+#        select.set('class',  'select')
+#        select.set('id',  'select2')
+#        select.set('onchange',  'filter();')
+#        option = etree.fromstring('<option>' + filter2_selected + '</option>')
+#        option.set('value',  filter2_selected)
+#        select.append(option)
+#        for opt in filter2:
+#            if opt == filter2_selected:
+#                continue
+#            option = etree.fromstring('<option>'+opt+'</option>')
+#            option.set('value',  opt)
+#            select.append(option)
+#        # known
+#        known = objectify.SubElement(menu,  'div')
+#        known.set('class',  'filters')
+#        known.div = 'Known:'
+#        known.div.set('class',  'filter_name')
+#        check = objectify.SubElement(known,  'div')
+#        check.input = 'NOT'
+#        check.input.set('type',  'checkbox')
+#        check.input.set('id',  'filter_check3')
+#        check.input.set('onchange',  'filter();')
+#        check.set('class',  'tax_check')
+#        if flag3 == 'true':
+#            check.input.set('checked',  'checked')
+#        select = objectify.SubElement(known,  'select')
+#        select.set('class',  'select')
+#        select.set('id',  'select3')
+#        select.set('onchange',  'filter();')
+#        option = etree.fromstring('<option>' + filter3_selected + '</option>')
+#        option.set('value',  filter3_selected)
+#        select.append(option)
+#        for opt in filter3:
+#            if opt == filter3_selected:
+#                continue
+#            option = etree.fromstring('<option>'+opt+'</option>')
+#            option.set('value',  opt)
+#            select.append(option)
         # Open the file with id of documents  
-        ids = self.get_ids(tax_selected,  filter2_selected,  filter3_selected,  flag1,  flag2,  flag3,  mongo)
+        #ids = self.get_ids(tax_selected,  filter2_selected,  filter3_selected,  flag1,  flag2,  flag3,  mongo)
         count = objectify.SubElement(menu,  'p')
-        count.b = str(len(ids)) + ' cards were found.'
-        count.span = '''Every card in following list has chosen annotations 
-                        or has not them if option "NOT" was indicated.'''
+        count.b = str(len(need_list)) + ' cards were found.'
+        if len(need_list) == 0:
+            count.span = '''Choose several cells in the table in order to see a list of cards.'''
+        else:
+            count.span = '''Every card in following list has chosen annotations.'''
+                            #or has not them if option "NOT" was indicated.'''
         # List of numbers  
         scroll = objectify.SubElement(td1,  'div')
         scroll.set('class',  'scroll')
         ul = objectify.SubElement(scroll,  'ul')
         ul.set('class',  'pink')
-        for id in ids:
+        for id in need_list:
             # Generate left list of id  
             li= objectify.fromstring('<li><center>#' + str(id)+'</center></li>')
             li.set('onclick',  'show_card('+str(id)+');')
@@ -178,17 +238,6 @@ class showIndex:
         self.site = etree.tostring(root,  pretty_print = True,  xml_declaration = True)
     
     def get_ids(self,  filter1,  filter2,  filter3,  flag1,  flag2,  flag3,  mongo):
-#        id_file_name = 'cci/documents/dir.list'
-#        try:
-#            id_file = open(id_file_name,  'r')
-#        except IOError:
-#            print('No such file or directory: ' + id_file_name)
-#            return None
-#        else:
-#            ids = []
-#            for line in id_file:
-#                ids.append(int(line))
-#            id_file.close()
         ids = get("all_indexes",  mongo=mongo)
         
         if filter1 == 'None':
@@ -206,18 +255,6 @@ class showIndex:
             ids3 = ids
         else:
             ids3 = get("results_apriory",  formula="CHF",  mongo=mongo)
-        print('ids3=' + str(ids3))
-#            filter3_file_name = 'claudia/cci/indexes/' + filter3 + '.idx'
-#            try:
-#                filter3_file = open(filter3_file_name,  'r')
-#            except IOError:
-#                print('No such file or directory: ' + filter3_file_name)
-#                return None
-#            else:
-#                ids3 = []
-#                for line in filter3_file:
-#                    ids3.append(line.strip())
-#                filter3_file.close()
                 
         need_list = []
         for id in ids:
