@@ -1,3 +1,4 @@
+import os
 import json
 from lxml import etree
 
@@ -25,6 +26,7 @@ class CardHandler:
             with open(doc_name,  'rb') as inp:
                 tree = etree.parse(inp, sHTML_Parser)
                 self.nodes = tree.xpath('/html/body/p')
+                self.size = os.path.getsize(doc_name)
         except IOError:
             print('No such file or directory: ' + doc_name)
             return None

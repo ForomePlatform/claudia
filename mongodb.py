@@ -1,5 +1,6 @@
 import sys
 import json
+import random
 from lxml import etree
 from cards import CardHandler
 from pymongo import MongoClient
@@ -42,8 +43,21 @@ def update(mongo):
         for line in indexes_file:
             doc = {}
             doc['id'] = line.strip()
+            card = CardHandler(doc['id'])
             doc['patient'] = 'patient_' + doc['id']
-            doc['html'] = get("doc.html",  number_of_card=doc['id'],  from_file=True)
+            doc['html'] = []
+            for nd in card.nodes:
+                doc['html'].append(etree.tostring(nd))
+            # Random sentence in doc
+            m = int(random.random()*len(doc['html']))
+            sentence = etree.fromstring(doc['html'][m])
+            text = ''
+            for nd in sentence.xpath('/p/span/span/span/span'):
+                text += ' ' + nd.text
+            doc['abstract'] = text[0:100]
+            doc['size'] = card.size
+#            doc['html'] = get("doc.html",  number_of_card=doc['id'],  from_file=True)
+#            doc['size'] = get("size_of_doc",  number_of_card=doc['id'],  from_file=True)
 
             q = {"$set":  {key: doc[key] for key in doc}}
             dbh.initial_docs.update({'id':doc['id'],  'patient': doc['patient']},  q, upsert=True)
@@ -53,9 +67,11 @@ def update(mongo):
             doc['id'] = line.strip()
             doc['patient'] = 'patient_' + doc['id']
             
-            file = get("doc.json",  number_of_card=doc['id'],  from_file=True)
+#            file = get("doc.json",  number_of_card=doc['id'],  from_file=True)
+            file = card.dict
             doc['json'] = json.dumps(file,  indent=4)
-            doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
+#            doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
+            doc['key_words'] = card.key_words
             
             q = {"$set":  {key: doc[key] for key in doc}}
             dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
@@ -214,6 +230,9 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             else:
                 steps = json.loads(steps_file)
                 return steps
+        elif type == "size_of_doc":
+            card = CardHandler(number_of_card)
+            return card.size
 
     else:
         if mongo is None:
@@ -272,8 +291,16 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             return results["indexes"]
         elif type == "annotations":
             dbh = mongo['DataSet_test']
-            annotations = dbh.calculated_docs.find_one({'id': number_of_card,  'formula': formula})
+            annotations = dbh.calculated_docs.find_one({'id': number_of_card})
             return annotations["annotations"]
+        elif type == "size_of_doc":
+            dbh = mongo['DataSet_test']
+            size = dbh.initial_docs.find_one({'id': number_of_card},  {'size': True})
+            return size['size']
+        elif type == "abstract":
+            dbh = mongo['DataSet_test']
+            abstract = dbh.initial_docs.find_one({'id': number_of_card}, {'abstract': True})
+            return abstract['abstract']
 
 # Put any file to the database
 def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=connect()):
@@ -290,7 +317,7 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
     elif type == "ch.json":
         key = 'chunks'
         dbh = mongo["DataSet_test"]
-        q = {"$set":  {key: json.dumps(file,  indent=4)}}
+        q = {"$set":  {key: json.dumps(file)}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
     elif type == "snap.json":
         key = 'snapshot'
@@ -336,10 +363,13 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         key = 'annotations'
         dbh = mongo["DataSet_test"]
         q = {"$set":  {key: file}}
-        dbh.calculated_docs.update({'id': number_of_card,  
-                'formula':formula},  q,  upsert=True)
+        dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
 
-if __name__ == '__main__':
-    c = connect()
-    update(c)
-    print('Ok')
+#if __name__ == '__main__':
+#    mongo = connect()
+#    update(mongo)
+#    if len(sys.args) > 2 and sys.args[2] == '-a':
+#        all_files(mongo)
+#        start_annotate(mongo)
+#        csv_to_json(mongo)
+#    print('Ok')

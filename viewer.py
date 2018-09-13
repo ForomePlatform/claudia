@@ -1,3 +1,4 @@
+import sys
 from lxml import etree
 from lxml import objectify
 from mongodb import get
@@ -73,7 +74,7 @@ class showIndex:
         if 'selected' in args:
             selected = args['selected'].split('*')[1:]
         else:
-            selected = []
+            selected = ['0_0']
         # Head  
         root = objectify.Element('html')
         head = objectify.SubElement(root, 'head')
@@ -249,8 +250,21 @@ class showIndex:
         ul.set('class',  'pink')
         for id in need_list:
             # Generate left list of id  
-            li= objectify.fromstring('<li><center>#' + str(id)+'</center></li>')
+            size = str(get("size_of_doc",  number_of_card=id,  mongo=mongo))[0:-3]
+            doc_data = get("annotations",  number_of_card=id)
+            if 'ICHF' in doc_data:
+                diag = ': ICHF'
+            else:
+                diag = ''
+            abs = get('abstract',  number_of_card=id,  mongo=mongo)
+            if abs.find('<') !=-1 or abs.find('>') != -1:
+                sys.exit()
+            abstract = '<div>' + abs + '...</div>'
+            s = '<li>#' + str(id)+' (' + size + 'Kb)' + diag + abstract + '</li>'
+            li= objectify.fromstring(s)
             li.set('onclick',  'show_card('+str(id)+');')
+            li.set('onmouseover',  'show_abstract(' + id + ');')
+            li.set('onmouseout',  'hide_abstract(' + id + ');')
             li.set('id',  'number'+str(id))
             li.set('class',  'pinkli')
             ul.append(li)

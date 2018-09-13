@@ -459,12 +459,13 @@ class showCard:
         table = objectify.SubElement(carcas,  'table')
         table.set('class',  'table')
         dict = get("doc.json",  number_of_card=number_of_card,  mongo=mongo)
-        for field in dict:
+        print(dict)
+        for field in dict['data']:
             tr = objectify.SubElement(table,  'tr')
             td = etree.fromstring('<td>'+str(field)+'</td>')
             tr.append(td)
             tr.td.set('class',  'cell1')
-            td = etree.fromstring('<td>'+dict[field]+'</td>')
+            td = etree.fromstring('<td>'+dict['data'][field]+'</td>')
             td.set('class',  'cell2')
             tr.append(td)
         carcas.br = ''
