@@ -39,6 +39,10 @@ class showCard:
             number_of_tab = int(args['tab'])
         else:
             number_of_tab = 1
+        if 'panel_align' in args:
+            panel_align = args['panel_align']
+        else:
+            panel_align = 'apply_anns_left'
 
         # Head  
         root = objectify.Element('html')
@@ -97,15 +101,41 @@ class showCard:
         tab = objectify.SubElement(tabs, 'div')
         tab.label = 'Code'
         tab.label.set('for',  'notebook2a_1')
+        tab.label.set('id',  'code_label')
         
+        tab.set('id',  'code_tab')
         apply_anns = objectify.SubElement(tab, 'div')
-        apply_anns.set('class',  'apply_anns')
-        div = objectify.SubElement(apply_anns ,  'div')
+        apply_anns.set('class',  panel_align)
+        apply_anns.set('id',  'code_panel')
+        move = objectify.SubElement(apply_anns,  'div')
+        move.set('class',  'move')
+        move.set('onmousedown',  'move_panel("code_panel");')
+        move.set('onmouseup',  'drop_panel("code_panel");')
+        move.b = ' '
+        
+        
+        div3 = objectify.SubElement(apply_anns ,  'div')
+        div3.set('id',  'code_button')
+        div = objectify.SubElement(div3 ,  'div')
         div.set('class',  'start')
         div.b = 'Step #' + str(new_step);
         div.b.set('id',  'step')
+        button1 = etree.fromstring('<button>Prev</button>')
+        button1.set('class',  'button')
+        button1.set('value',  str(new_step))
+        button1.set('id',  'start3')
+        button1.set('onclick',  'prev_step();')
+        div3.append(button1)
+        button2 = etree.fromstring('<button>Next</button>')
+        button2.set('class',  'button')
+        button2.set('value',  str(new_step))
+        button2.set('id',  'start4')
+        button2.set('onclick',  'next_step();')
+        div3.append(button2)
+        
         div2 = objectify.SubElement(apply_anns ,  'div')
         div2.set('class',  'code')
+        div2.set('id',  'code_steps')
         
         code = get("code.json",  formula="CHF",  mongo=mongo)
         filtre = re.compile("\s+", re.M + re.I + re.U)
@@ -132,23 +162,11 @@ class showCard:
             div2.append(p)
             n += 1
         
-        div3 = objectify.SubElement(apply_anns ,  'div')
-        button1 = etree.fromstring('<button>Prev</button>')
-        button1.set('class',  'button')
-        button1.set('value',  str(new_step))
-        button1.set('id',  'start3')
-        button1.set('onclick',  'prev_step();')
-        div3.append(button1)
-        button2 = etree.fromstring('<button>Next</button>')
-        button2.set('class',  'button')
-        button2.set('value',  str(new_step))
-        button2.set('id',  'start4')
-        button2.set('onclick',  'next_step();')
-        div3.append(button2)
         
         
         label = objectify.SubElement(tab, 'div')
-        label.set('class',  'label')
+        label.set('class',  'label_left')
+        label.set('id',  'advice')
         
         steps = {}
         if new_step == 0:
@@ -188,6 +206,7 @@ class showCard:
             for key in new_chunks['data']:
                 s += key + ': ' + new_chunks['data'][key] + '; '
         all_chunks.set('title',  s)
+        all_chunks.set('id',  'code_chunks')
         changed_chunks = 0
         for m in range(len(new_chunks['sentences'])):
             p = objectify.SubElement(all_chunks,  'p')
@@ -319,7 +338,6 @@ class showCard:
             for el in annotations:
                 s = str(el)  + ': ' + str(annotations[el])
                 p = etree.fromstring('<p>' + s + '</p>')
-                print(p.text)
                 div_by_step.append(p)
         
         # Tab 3: Print DocNNN.html (Document)
@@ -459,7 +477,6 @@ class showCard:
         table = objectify.SubElement(carcas,  'table')
         table.set('class',  'table')
         dict = get("doc.json",  number_of_card=number_of_card,  mongo=mongo)
-        print(dict)
         for field in dict['data']:
             tr = objectify.SubElement(table,  'tr')
             td = etree.fromstring('<td>'+str(field)+'</td>')

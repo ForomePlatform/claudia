@@ -4,6 +4,7 @@ import random
 from lxml import etree
 from cards import CardHandler
 from pymongo import MongoClient
+from pymongo import errors
 
 taxes = [
             'Cardio-Loc', 
@@ -21,13 +22,14 @@ taxes = [
 
 # Connect to MongoDB
 def connect():
-    try:
-        #c = Connection(host="localhost",  port  = 27017)
-        mongo = MongoClient(host="localhost",  port  = 27017, connect=False)
-        print('Database connection successfully')
-    except Exception:
-        print("Could not connect to MongoDB")
+    mongo = MongoClient(host="localhost",  port  = 27017, connect=False)
+    try: 
+        mongo.admin.command("ismaster") 
+    except errors.ServerSelectionTimeoutError: 
+        print("DataBase not available: could not connect to MongoDB")
         sys.exit(1)
+    else:
+        print('Database connection successfully')
     return mongo
 
 def update(mongo):
