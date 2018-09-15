@@ -118,7 +118,8 @@ class HServHandler:
 
     #===============================================
     def processRq(self, environ, start_response):
-        global mongo
+        # global mongo
+        mongo = connect()
         resp_h = HServResponse(start_response)
         try:
             path, query_args = self.parseRequest(environ)

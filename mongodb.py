@@ -1,6 +1,5 @@
 import sys
 import json
-import random
 from lxml import etree
 from cards import CardHandler
 from pymongo import MongoClient
@@ -48,16 +47,22 @@ def update(mongo):
             card = CardHandler(doc['id'])
             doc['patient'] = 'patient_' + doc['id']
             doc['html'] = []
+            # Find the longest sentence
+            max_nd = 0
+            max_len = 0;
             for nd in card.nodes:
-                doc['html'].append(etree.tostring(nd))
-            # Random sentence in doc
-            m = int(random.random()*len(doc['html']))
-            sentence = etree.fromstring(doc['html'][m])
+                str = etree.tostring(nd)
+                doc['html'].append(str)
+                if len(str) > max_len and doc['html'][0] !=str:
+                    max_len = len(str)
+                    max_nd = doc['html'].index(str)
+            #m = int(random.random()*len(doc['html']))
+            sentence = etree.fromstring(doc['html'][max_nd])
             text = ''
             for nd in sentence.xpath('/p/span/span/span/span'):
                 text += ' ' + nd.text
             doc['abstract'] = text[0:100]
-            doc['size'] = card.size
+            doc['size'] = len(doc['html'])
 #            doc['html'] = get("doc.html",  number_of_card=doc['id'],  from_file=True)
 #            doc['size'] = get("size_of_doc",  number_of_card=doc['id'],  from_file=True)
 
@@ -73,7 +78,7 @@ def update(mongo):
             file = card.dict
             doc['json'] = json.dumps(file,  indent=4)
 #            doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
-            doc['key_words'] = card.key_words
+            doc['key_words'] = card.key_words.split(', ')
             
             q = {"$set":  {key: doc[key] for key in doc}}
             dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
@@ -116,7 +121,7 @@ def update(mongo):
     dbh.formulas.update({"formula": "CHF"},  formula, upsert=True)
 
 # Get arbitrary file from the database or form a file (if 'from_file' is True)
-def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None", base="",  mongo=connect()):
+def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None", base="",  mongo=None):
     if from_file:
         if type == "doc.html":
             card = CardHandler(number_of_card)
@@ -283,10 +288,11 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             dbh = mongo["DataSet_test"]
             indexes = dbh.formula_results.find_one({"formula": formula})
             return indexes["indexes"]
-        elif type == "results_apriory":
+        elif type.split('.')[0] == "results_apriory":
+            key = type.split('.')[1]
             dbh = mongo["DataSet_test"]
-            results = dbh.results_apriory.find_one({"formula": formula})
-            return results["indexes"]
+            results = dbh.results_apriory.find_one({"formula": formula},  {key: True})
+            return results[key]
         elif type == "steps.json":
             dbh = mongo["DataSet_test"]
             results = dbh.steps.find_one({"formula": formula})
@@ -305,7 +311,7 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
             return abstract['abstract']
 
 # Put any file to the database
-def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=connect()):
+def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=None):
     if type == "doc.html":
         key = 'html'
         dbh = mongo["DataSet_test"]
@@ -352,10 +358,10 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         q = {"$set":  {key: file}}
         dbh.formula_results.update({'formula': formula},  q,  upsert=True)
     elif type == "results_apriory":
-        key = 'indexes'
         dbh = mongo["DataSet_test"]
-        q = {"$set":  {key: file}}
-        dbh.results_apriory.update({'formula': formula},  q,  upsert=True)
+        for key in file:
+            q = {"$set":  {key: file[key]}}
+            dbh.results_apriory.update({'formula': formula},  q,  upsert=True)
     elif type == "steps.json":
         key = 'indexes'
         dbh = mongo["DataSet_test"]

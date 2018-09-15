@@ -3,6 +3,15 @@ import sys
 from mongodb import put
 from mongodb import connect
 
+apriory = [
+            'not mentioned', 
+            'ambiguous',
+            'diagnosed', 
+            'inconclusive', 
+            'ruled out', 
+            'symptoms present'
+            ]
+
 def csv_to_json(mongo):
     csv_file_name = 'cci/data/TrainingCases2016-11-16.txt' # CSV-file  
     #json_directory = 'cci/documents' # Directory for JSON-files and file dir.list with id of cards
@@ -14,7 +23,9 @@ def csv_to_json(mongo):
         sys.exit()
     else:
         ids = [] # List of id of cards
-        chf_ids = []
+        chf_ids = {}
+        for stat in apriory:
+            chf_ids[stat] = []
         for line in f:
             card = line.split('\t')
             try:
@@ -33,15 +44,17 @@ def csv_to_json(mongo):
                         key = field
                     else:
                         dict[key] = field
-                        if key == "CHF - diagnosed":
-                            chf_ids.append(number_of_card)
+                        if key[0:3] == "CHF":
+                            for stat in apriory:
+                                if key.find(stat) != -1:
+                                    chf_ids[stat].append(number_of_card)
                         key = ''
                 # Record dictionary to JSON-file
                 put("doc.json", dict, number_of_card=number_of_card,  mongo=mongo)
         # Record of id of cards
         f.close()
         ids.sort()
-        print(str(len(chf_ids))+ ' documents apriory have diagnosis CHF.')
+        #print(str(len(chf_ids))+ ' documents apriory have diagnosis CHF.')
         put('results_apriory',  chf_ids,  formula = 'CHF',  mongo=mongo)
 
 if __name__ == '__main__':

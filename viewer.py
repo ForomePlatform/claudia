@@ -1,4 +1,3 @@
-import sys
 from lxml import etree
 from lxml import objectify
 from mongodb import get
@@ -14,13 +13,17 @@ taxes = [
             'MI-Words', 
             'PVD-Words'
             ]
-filter2 = [
-            'None', 
+apostriory = [
+            'Other', 
             'ICHF'
             ]
-filter3 = [
-            'None', 
-            'CHF-diagnosed'
+apriory = [
+            'not mentioned', 
+            'ambiguous',
+            'diagnosed', 
+            'inconclusive', 
+            'ruled out', 
+            'symptoms present'
             ]
 
 def intersection(list1,  list2):
@@ -74,7 +77,7 @@ class showIndex:
         if 'selected' in args:
             selected = args['selected'].split('*')[1:]
         else:
-            selected = ['0_0']
+            selected = []
         # Head  
         root = objectify.Element('html')
         head = objectify.SubElement(root, 'head')
@@ -101,30 +104,28 @@ class showIndex:
         td.set('class',  'key_cell')
         ids = get('all_indexes',  mongo=mongo)
         need_list = []
-        for column in filter3:
+        for column in apostriory:
             td= objectify.SubElement(tr,  'td')
             td.set('class',  'key_cell')
             td.b = column
-        for row in filter2:
+        for row in apriory:
             tr = objectify.SubElement(pivot,  'tr')
             td = objectify.SubElement(tr,  'td')
             td.set('class',  'key_cell')
             td.b = row
-            for column in filter3:
-                i = filter2.index(row)
-                j = filter3.index(column)
+            for column in apostriory:
+                i = apriory.index(row)
+                j = apostriory.index(column)
                 couple = str(i) + '_' + str(j)
                 td = objectify.SubElement(tr,  'td')
                 td.set('onclick',  'renew_list("cell' + couple +'");')
                 td.set('id',  'cell' + couple)
-                if row == 'None':
-                    ids2 = ids
+                list_apostriory = get('calculated_indexes',  formula='CHF',  mongo=mongo)
+                if column == 'Other':
+                    ids2 = difference(ids,  list_apostriory)
                 else:
-                    ids2 = get('calculated_indexes',  formula='CHF',  mongo=mongo)
-                if column == 'None':
-                    ids3 = ids
-                else:
-                    ids3 = get('results_apriory',  formula='CHF',  mongo=mongo)
+                    ids2 = list_apostriory
+                ids3 = get('results_apriory.' + row,  formula='CHF',  mongo=mongo)
                 list = intersection(ids2,  ids3)
                 td.i = len(list)
                 if couple in selected:
@@ -144,7 +145,7 @@ class showIndex:
         reset.button = 'Reset all filters'
         reset.button.set('class',  'button')
         reset.set('id',  'reset')
-        reset.set('onclick',  'reset();')
+        reset.button.set('onclick',  'reset();')
             
 #        keys = objectify.SubElement(menu,  'div')
 #        keys.b = 'Choose a filter:'
@@ -248,19 +249,23 @@ class showIndex:
         scroll.set('class',  'scroll')
         ul = objectify.SubElement(scroll,  'ul')
         ul.set('class',  'pink')
+        chf = {}
+        for stat in apriory:
+            chf[stat] = get("results_apriory." + stat,  formula='CHF',  mongo=mongo)
+        # chf_diagnosed = get("results_apriory",  formula='CHF',  mongo=mongo)
         for id in need_list:
             # Generate left list of id  
-            size = str(get("size_of_doc",  number_of_card=id,  mongo=mongo))[0:-3]
-            doc_data = get("annotations",  number_of_card=id)
-            if 'ICHF' in doc_data:
-                diag = ': ICHF'
-            else:
-                diag = ''
+            size = str(get("size_of_doc",  number_of_card=id,  mongo=mongo))
+            for stat in apriory:
+                if id in chf[stat]:
+                    diag = ': CHF-' + stat
+                else:
+                    diag = ''
             abs = get('abstract',  number_of_card=id,  mongo=mongo)
-            if abs.find('<') !=-1 or abs.find('>') != -1:
-                sys.exit()
+            abs = abs.replace('>',  '&gt;')
+            abs = abs.replace('<',  '&lt;')
             abstract = '<div>' + abs + '...</div>'
-            s = '<li>#' + str(id)+' (' + size + 'Kb)' + diag + abstract + '</li>'
+            s = '<li>#' + str(id)+' (' + size + ' sentences)' + diag + abstract + '</li>'
             li= objectify.fromstring(s)
             li.set('onclick',  'show_card('+str(id)+');')
             li.set('onmouseover',  'show_abstract(' + id + ');')
