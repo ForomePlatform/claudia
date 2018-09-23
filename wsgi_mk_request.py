@@ -26,6 +26,8 @@ class ClaudiaService:
     def __init__(self, config, in_container):
         self.mConfig = config
         self.mInContainer = in_container
+        print('config=' + str(config))
+        print('in_container=' + str(in_container))
         # AnfisaData.setup(config)
         self.mHtmlTitle = self.mConfig["html-title"]
         self.mHtmlBase = (self.mConfig["html-base"]

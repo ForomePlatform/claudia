@@ -73,13 +73,14 @@ class HServHandler:
     #===============================================
     def parseRequest(self, environ):
         path = environ["PATH_INFO"]
+        #print('before = "' + path + '"')
         if self.mHtmlBase and path.startswith(self.mHtmlBase):
             path = path[len(self.mHtmlBase):]
         if not path:
             path = "/"
-        print('path = "' + path + '"')
+        #print('path = "' + path + '"')
         query_string = environ["QUERY_STRING"]
-        print('query="' + query_string + '"')
+       # print('query="' + query_string + '"')
 
         query_args = dict()
         if query_string:
@@ -123,6 +124,8 @@ class HServHandler:
         resp_h = HServResponse(start_response)
         try:
             path, query_args = self.parseRequest(environ)
+            #print('path="' + path)
+            #print(query_args)
             if path.find('.') != -1:
                 ret = self.fileResponse(resp_h, path, True)
                 if ret is not False:

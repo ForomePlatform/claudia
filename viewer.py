@@ -23,7 +23,8 @@ apriory = [
             'diagnosed', 
             'inconclusive', 
             'ruled out', 
-            'symptoms present'
+            'symptoms present', 
+            'other'
             ]
 
 def intersection(list1,  list2):
@@ -256,11 +257,10 @@ class showIndex:
         for id in need_list:
             # Generate left list of id  
             size = str(get("size_of_doc",  number_of_card=id,  mongo=mongo))
+            diag = ''
             for stat in apriory:
                 if id in chf[stat]:
                     diag = ': CHF-' + stat
-                else:
-                    diag = ''
             abs = get('abstract',  number_of_card=id,  mongo=mongo)
             abs = abs.replace('>',  '&gt;')
             abs = abs.replace('<',  '&lt;')

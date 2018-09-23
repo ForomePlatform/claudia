@@ -9,7 +9,8 @@ apriory = [
             'diagnosed', 
             'inconclusive', 
             'ruled out', 
-            'symptoms present'
+            'symptoms present', 
+            'other'
             ]
 
 def csv_to_json(mongo):
@@ -38,6 +39,7 @@ def csv_to_json(mongo):
                 # Read every card and record to a dictionary  
                 dict = {}
                 key = ''
+                h = True
                 for field in card[2:]:
                     if field.isspace():  continue
                     if key == '':
@@ -45,10 +47,14 @@ def csv_to_json(mongo):
                     else:
                         dict[key] = field
                         if key[0:3] == "CHF":
+                            h = False
                             for stat in apriory:
                                 if key.find(stat) != -1:
                                     chf_ids[stat].append(number_of_card)
+                                    break
                         key = ''
+                if h:
+                    print(number_of_card)
                 # Record dictionary to JSON-file
                 put("doc.json", dict, number_of_card=number_of_card,  mongo=mongo)
         # Record of id of cards

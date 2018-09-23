@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 from lxml import etree
@@ -27,70 +28,86 @@ def connect():
     except errors.ServerSelectionTimeoutError: 
         print("DataBase not available: could not connect to MongoDB")
         sys.exit(1)
-    else:
-        print('Database connection successfully')
+#    else:
+#        print('Database connection successfully')
     return mongo
+
+def load_doc(dataset,  id,  mongo):
+    dbh = mongo[dataset]
+    doc = {}
+    # initial
+    doc['id'] = id
+    card = CardHandler(dataset, id)
+    doc['patient'] = 'patient_' + id
+    doc['html'] = []
+    # Find the longest sentence
+    max_nd = 0
+    max_len = 0;
+    for nd in card.nodes:
+        str = etree.tostring(nd)
+        doc['html'].append(str)
+        if len(str) > max_len and doc['html'][0] !=str:
+            max_len = len(str)
+            max_nd = doc['html'].index(str)
+    sentence = etree.fromstring(doc['html'][max_nd])
+    text = ''
+    for nd in sentence.xpath('/p/span/span/span/span'):
+        text += ' ' + nd.text
+    doc['abstract'] = text[0:100]
+    doc['size'] = len(doc['html'])
+
+    q = {"$set":  {key: doc[key] for key in doc}}
+    dbh.initial_docs.update({'id': id,  'patient': doc['patient']},  q, upsert=True)
+    
+    # claculated
+    if dataset != 'cci':
+        return
+    doc = {}
+    doc['id'] = id
+    doc['patient'] = 'patient_' + id
+    
+    file = card.dict
+    doc['json'] = json.dumps(file,  indent=4)
+    doc['key_words'] = card.key_words.split(', ')
+    
+    q = {"$set":  {key: doc[key] for key in doc}}
+    dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
+    print('Update document #' + doc['id'] + '.')
 
 def update(mongo):
     # Add documents to the base
-    dbh = mongo["DataSet_test"]
-    indexes_file_name = 'cci/documents/dir.list'
-    try:
-        indexes_file = open(indexes_file_name,  'r')
-    except IOError:
-        print('No such file or directory: ' + indexes_file_name)
-        return -1
-    else:
-        for line in indexes_file:
-            doc = {}
-            doc['id'] = line.strip()
-            card = CardHandler(doc['id'])
-            doc['patient'] = 'patient_' + doc['id']
-            doc['html'] = []
-            # Find the longest sentence
-            max_nd = 0
-            max_len = 0;
-            for nd in card.nodes:
-                str = etree.tostring(nd)
-                doc['html'].append(str)
-                if len(str) > max_len and doc['html'][0] !=str:
-                    max_len = len(str)
-                    max_nd = doc['html'].index(str)
-            #m = int(random.random()*len(doc['html']))
-            sentence = etree.fromstring(doc['html'][max_nd])
-            text = ''
-            for nd in sentence.xpath('/p/span/span/span/span'):
-                text += ' ' + nd.text
-            doc['abstract'] = text[0:100]
-            doc['size'] = len(doc['html'])
-#            doc['html'] = get("doc.html",  number_of_card=doc['id'],  from_file=True)
-#            doc['size'] = get("size_of_doc",  number_of_card=doc['id'],  from_file=True)
-
-            q = {"$set":  {key: doc[key] for key in doc}}
-            dbh.initial_docs.update({'id':doc['id'],  'patient': doc['patient']},  q, upsert=True)
-            
-            # claculated
-            doc = {}
-            doc['id'] = line.strip()
-            doc['patient'] = 'patient_' + doc['id']
-            
-#            file = get("doc.json",  number_of_card=doc['id'],  from_file=True)
-            file = card.dict
-            doc['json'] = json.dumps(file,  indent=4)
-#            doc['key_words'] = get("key_words",  number_of_card=doc['id'],  from_file=True)
-            doc['key_words'] = card.key_words.split(', ')
-            
-            q = {"$set":  {key: doc[key] for key in doc}}
-            dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
-            print('Update document #' + doc['id'] + '.')
+    datasets = [
+                'cci', 
+                'nets', 
+                'medications'
+                ]
+    for ds in datasets:
+        if ds == 'cci':
+            dbh = mongo['DataSet_test']
+        else:
+            dbh = mongo[ds]
+        
+#    indexes_file_name = 'cci/documents/dir.list'
+#    try:
+#        indexes_file = open(indexes_file_name,  'r')
+#    except IOError:
+#        print('No such file or directory: ' + indexes_file_name)
+#        return -1
+#    else:
+#        for line in indexes_file:
+#            id = line.strip()
+        indexes = get('all_indexes',  dataset=ds,  from_file=True)
+        print('indexes: ' + str(len(indexes)))
+        for id in indexes:
+            load_doc(ds,  id,  mongo)
             
             # patients
             patient = {}
-            patient['name'] = 'patient_' + line.strip()
+            patient['name'] = 'patient_' + id
             
             q = {"$set":  {key: patient[key] for key in patient}}
             dbh.patients.update({'name': patient['name']},  q,  upsert=True)
-        indexes_file.close()
+
     dbh.dir.insert({})
     
     # Add taxonomies to the base
@@ -119,9 +136,12 @@ def update(mongo):
     formula['json'] = json.dumps(get("code.json",  from_file=True),  indent=4)
     q = {"$set": {key: formula[key] for key in formula}}
     dbh.formulas.update({"formula": "CHF"},  formula, upsert=True)
+    
 
 # Get arbitrary file from the database or form a file (if 'from_file' is True)
-def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="None", base="",  mongo=None):
+def get(type, number_of_card="0",  taxonomy ="None",  
+            from_file=False, formula="None", base="",  
+            dataset='cci',  mongo=None):
     if from_file:
         if type == "doc.html":
             card = CardHandler(number_of_card)
@@ -208,16 +228,27 @@ def get(type, number_of_card="0",  taxonomy ="None",  from_file=False, formula="
                 code_file.close()
                 return code
         elif type == "all_indexes":
-            try:
-                id_file = open(base + 'cci/documents/dir.list', 'r')
-            except IOError:
-                print('No such file or directory: cci/documents/dir.list')
-            else:
-                indexes = []
-                for line in id_file:
-                    number_of_card = line.strip()
-                    indexes.append(number_of_card)
-                return indexes
+            path = base + dataset + '/documents'
+            files = os.listdir(path)
+            indexes = []
+            for file in files:
+                if file[-5:] != '.html':
+                    continue
+                id = file[3:-5]
+                indexes.append(int(id))
+            indexes.sort()
+            ids = [str(n) for n in indexes]
+            return ids
+#            try:
+#                id_file = open(base + 'cci/documents/dir.list', 'r')
+#            except IOError:
+#                print('No such file or directory: cci/documents/dir.list')
+#            else:
+#                indexes = []
+#                for line in id_file:
+#                    number_of_card = line.strip()
+#                    indexes.append(number_of_card)
+#                return indexes
         elif type == "results_apriory":
             try:
                 id_file = open(base + 'cci/indexes/' + formula + '-diagnosed.idx' , 'r')
