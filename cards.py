@@ -4,9 +4,9 @@ from lxml import etree
 
 # This class finds all informaition about a card  
 class CardHandler:
-    dict = {}
-    nodes = []
-    key_words = ''
+#    dict = {}
+#    nodes = []
+#    key_words = ''
     def __init__(self, dataset, number_of_card):
         # Load JSON-file  
         if dataset == 'cci':
@@ -27,6 +27,8 @@ class CardHandler:
             with open(doc_name,  'rb') as inp:
                 tree = etree.parse(inp, sHTML_Parser)
                 self.nodes = tree.xpath('/html/body/p')
+                if number_of_card == '1':
+                    print('nodes="' + str(len(self.nodes))+'"')
                 self.size = os.path.getsize(doc_name)
         except IOError:
             print('No such file or directory: ' + doc_name)

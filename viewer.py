@@ -1,3 +1,4 @@
+import json
 from lxml import etree
 from lxml import objectify
 from mongodb import get
@@ -51,6 +52,9 @@ def difference(list1,  list2):
 
 class showIndex:
     def __init__(self,  args,  mongo):
+        config_file = open('claudia.json',  'r')
+        config = json.loads(config_file.read())
+        config_file.close()
         if 'tax' in args:
             tax_selected = args['tax']
         else:
@@ -84,8 +88,8 @@ class showIndex:
         head = objectify.SubElement(root, 'head')
         head.title = "Medical cards"
         head.script = ""
-        head.script.set('src',  'viewer.js')
-        head.style = '@import url(viewer.css)'
+        head.script.set('src',  config['addr'] + config['html-base'] + 'viewer.js')
+        head.style = '@import url(' + config['addr'] + config['html-base'] + 'viewer.css)'
         # Body  
         body = objectify.SubElement(root,  'body')
         body.set('style', 'background-image: url("aquamarine-cubes.png")')
@@ -96,9 +100,21 @@ class showIndex:
         # Filters
         menu = objectify.SubElement(td1,  'div')
         menu.set('class',  'menu')
-        
+        # Emblem
+        emblem = objectify.SubElement(menu,  'div')
+        emblem.set('class',  'emblem')
+        claudia = objectify.SubElement(emblem,  'div')
+        claudia.set('class',  'claudia')
+        img = objectify.SubElement(claudia,  'img')
+        img.set('src',  'emblem.png')
+        ws = objectify.SubElement(emblem,  'div')
+        ws.set('class',  'workspace')
+        ws_div = objectify.SubElement(ws,  'div')
+        ws_div.b = 'Workspace:'
+        ws.span = 'Cardio'
         # Pivot table
-        pivot = objectify.SubElement(menu,  'table')
+        pivot_div = objectify.SubElement(menu,  'div')
+        pivot = objectify.SubElement(pivot_div,  'table')
         pivot.set('class',  'pivote_table')
         tr = objectify.SubElement(pivot,  'tr')
         td = objectify.SubElement(tr,  'td')
@@ -288,7 +304,7 @@ class showIndex:
         filters_panel = objectify.SubElement(card,  'div')
         filters_panel.set('class',  'filters_panel')
         keys = objectify.SubElement(filters_panel,  'div')
-        keys.b = 'Choose a filter:'
+        keys.b = 'Choose filters:'
         # row-data
         row_data = objectify.SubElement(filters_panel,  'div')
         row_data.set('class',  'filters')
@@ -315,6 +331,17 @@ class showIndex:
             option = etree.fromstring('<option>'+tax+'</option>')
             option.set('value',  tax)
             select.append(option)
+        # Formulas
+        formulas = objectify.SubElement(filters_panel,  'div')
+        formulas.set('class',  'filters')
+        formulas.div = 'Formula:'
+        formulas.div.set('class',  'filter_name')
+        select = objectify.SubElement(formulas,  'select')
+        select.set('class',  'select')
+        select.set('onchange',  'filter();')
+        select.set('id',  'select_formulas')
+        option = etree.fromstring('<option>CHF</option>')
+        select.append(option)
         # Print to file  
         objectify.deannotate(root)
         etree.cleanup_namespaces(root)

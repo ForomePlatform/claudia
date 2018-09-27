@@ -33,6 +33,7 @@ def connect():
     return mongo
 
 def load_doc(dataset,  id,  mongo):
+    print('Update document #' + id + ' from "' + dataset + '".')
     dbh = mongo[dataset]
     doc = {}
     # initial
@@ -42,20 +43,22 @@ def load_doc(dataset,  id,  mongo):
     doc['html'] = []
     # Find the longest sentence
     max_nd = 0
-    max_len = 0;
+    max_len = 0
     for nd in card.nodes:
-        str = etree.tostring(nd)
-        doc['html'].append(str)
-        if len(str) > max_len and doc['html'][0] !=str:
-            max_len = len(str)
-            max_nd = doc['html'].index(str)
-    sentence = etree.fromstring(doc['html'][max_nd])
-    text = ''
-    for nd in sentence.xpath('/p/span/span/span/span'):
-        text += ' ' + nd.text
+        s = etree.tostring(nd)
+        doc['html'].append(s)
+        if len(s) > max_len and doc['html'][0] !=s:
+            max_len = len(s)
+            max_nd = doc['html'].index(s)
+    if max_len != 0:
+        sentence = etree.fromstring(doc['html'][max_nd])
+        text = ''
+        for nd in sentence.xpath('/p/span/span/span/span'):
+            text += ' ' + nd.text
+    else:
+        text = 'No information'
     doc['abstract'] = text[0:100]
     doc['size'] = len(doc['html'])
-
     q = {"$set":  {key: doc[key] for key in doc}}
     dbh.initial_docs.update({'id': id,  'patient': doc['patient']},  q, upsert=True)
     
@@ -72,7 +75,6 @@ def load_doc(dataset,  id,  mongo):
     
     q = {"$set":  {key: doc[key] for key in doc}}
     dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
-    print('Update document #' + doc['id'] + '.')
 
 def update(mongo):
     # Add documents to the base
