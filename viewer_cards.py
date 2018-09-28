@@ -179,7 +179,6 @@ class showCard:
         else:
             i = len(steps['steps'])
             while i <= new_step:
-                print('Step: ' + str(i))
                 next_step(code, number_of_card,  i,  mongo)
                 snap = get("snap.json",  number_of_card=number_of_card,  mongo=mongo)
                 new_chunks = snap

@@ -1,4 +1,5 @@
 import json
+import datetime
 from lxml import etree
 from lxml import objectify
 from mongodb import get
@@ -52,6 +53,8 @@ def difference(list1,  list2):
 
 class showIndex:
     def __init__(self,  args,  mongo):
+        now = datetime.datetime.now()
+        version = '?v=' + str(now.second)
         config_file = open('claudia.json',  'r')
         config = json.loads(config_file.read())
         config_file.close()
@@ -88,11 +91,15 @@ class showIndex:
         head = objectify.SubElement(root, 'head')
         head.title = "Medical cards"
         head.script = ""
-        head.script.set('src',  config['addr'] + config['html-base'] + 'viewer.js')
-        head.style = '@import url(' + config['addr'] + config['html-base'] + 'viewer.css)'
+        head.script.set('src',  config['addr'] + config['html-base'] + 'viewer.js' + version)
+#        script = objectify.SubElement(head, 'script')
+#        script.set('src',  'https://cdn.jsdelivr.net/npm/vue')
+        url =  config['addr'] + config['html-base'] + 'viewer.css' + version
+        head.style = '@import url(' + url + ')'
         # Body  
         body = objectify.SubElement(root,  'body')
-        body.set('style', 'background-image: url("aquamarine-cubes.png")')
+        url = '' + config['addr'] + config['html-base'] +'aquamarine-cubes.png' + version
+        body.set('style', 'background-image: url(' + url + ')')
         body.set('id',  'main')
         # Left part of page  
         td1 = objectify.SubElement(body,  'div')
@@ -106,7 +113,7 @@ class showIndex:
         claudia = objectify.SubElement(emblem,  'div')
         claudia.set('class',  'claudia')
         img = objectify.SubElement(claudia,  'img')
-        img.set('src',  'emblem.png')
+        img.set('src',  'emblem_shadow.png')
         ws = objectify.SubElement(emblem,  'div')
         ws.set('class',  'workspace')
         ws_div = objectify.SubElement(ws,  'div')
@@ -163,87 +170,8 @@ class showIndex:
         reset.button.set('class',  'button')
         reset.set('id',  'reset')
         reset.button.set('onclick',  'reset();')
-            
-#        keys = objectify.SubElement(menu,  'div')
-#        keys.b = 'Choose a filter:'
-#        # row-data
-#        row_data = objectify.SubElement(menu,  'div')
-#        row_data.set('class',  'filters')
-#        row_data.div = 'Row-data:'
-#        row_data.div.set('class',  'filter_name')
-#        check = objectify.SubElement(row_data,  'div')
-#        check.input = 'NOT'
-#        check.input.set('type',  'checkbox')
-#        check.input.set('id',  'filter_check1')
-#        check.input.set('onchange',  'filter();')
-#        if flag1 == 'true':
-#            check.input.set('checked',  'checked')
-#        check.set('class',  'tax_check')
-#        select = objectify.SubElement(row_data,  'select')
-#        select.set('class',  'select')
-#        select.set('id',  'select1')
-#        select.set('onchange',  'filter();')
-#        option = etree.fromstring('<option>' + tax_selected + '</option>')
-#        option.set('value',  tax_selected)
-#        select.append(option)
-#        for tax in taxes:
-#            if tax == tax_selected:
-#                continue
-#            option = etree.fromstring('<option>'+tax+'</option>')
-#            option.set('value',  tax)
-#            select.append(option)
-#        # calculated
-#        calculated= objectify.SubElement(menu,  'div')
-#        calculated.set('class',  'filters')
-#        calculated.div = 'Calculated:'
-#        calculated.div.set('class',  'filter_name')
-#        check = objectify.SubElement(calculated,  'div')
-#        check.input = 'NOT'
-#        check.input.set('type',  'checkbox')
-#        check.input.set('id',  'filter_check2')
-#        check.input.set('onchange',  'filter();')
-#        check.set('class',  'tax_check')
-#        if flag2 == 'true':
-#            check.input.set('checked',  'checked')
-#        select = objectify.SubElement(calculated,  'select')
-#        select.set('class',  'select')
-#        select.set('id',  'select2')
-#        select.set('onchange',  'filter();')
-#        option = etree.fromstring('<option>' + filter2_selected + '</option>')
-#        option.set('value',  filter2_selected)
-#        select.append(option)
-#        for opt in filter2:
-#            if opt == filter2_selected:
-#                continue
-#            option = etree.fromstring('<option>'+opt+'</option>')
-#            option.set('value',  opt)
-#            select.append(option)
-#        # known
-#        known = objectify.SubElement(menu,  'div')
-#        known.set('class',  'filters')
-#        known.div = 'Known:'
-#        known.div.set('class',  'filter_name')
-#        check = objectify.SubElement(known,  'div')
-#        check.input = 'NOT'
-#        check.input.set('type',  'checkbox')
-#        check.input.set('id',  'filter_check3')
-#        check.input.set('onchange',  'filter();')
-#        check.set('class',  'tax_check')
-#        if flag3 == 'true':
-#            check.input.set('checked',  'checked')
-#        select = objectify.SubElement(known,  'select')
-#        select.set('class',  'select')
-#        select.set('id',  'select3')
-#        select.set('onchange',  'filter();')
-#        option = etree.fromstring('<option>' + filter3_selected + '</option>')
-#        option.set('value',  filter3_selected)
-#        select.append(option)
-#        for opt in filter3:
-#            if opt == filter3_selected:
-#                continue
-#            option = etree.fromstring('<option>'+opt+'</option>')
-#            option.set('value',  opt)
-#            select.append(option)
+        
+
         # Open the file with id of documents  
         #ids = self.get_ids(tax_selected,  filter2_selected,  filter3_selected,  flag1,  flag2,  flag3,  mongo)
         if tax_selected == 'None':
@@ -269,7 +197,6 @@ class showIndex:
         chf = {}
         for stat in apriory:
             chf[stat] = get("results_apriory." + stat,  formula='CHF',  mongo=mongo)
-        # chf_diagnosed = get("results_apriory",  formula='CHF',  mongo=mongo)
         for id in need_list:
             # Generate left list of id  
             size = str(get("size_of_doc",  number_of_card=id,  mongo=mongo))
