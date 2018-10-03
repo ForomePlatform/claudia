@@ -63,14 +63,14 @@ def load_doc(dataset,  id,  mongo):
     dbh.initial_docs.update({'id': id,  'patient': doc['patient']},  q, upsert=True)
     
     # claculated
-    if dataset != 'cci':
-        return
+#    if dataset != 'cci':
+#        return
     doc = {}
     doc['id'] = id
     doc['patient'] = 'patient_' + id
     
     file = card.dict
-    doc['json'] = json.dumps(file,  indent=4)
+    doc['json'] = json.dumps(file)
     doc['key_words'] = card.key_words.split(', ')
     
     q = {"$set":  {key: doc[key] for key in doc}}
@@ -83,10 +83,7 @@ def update(mongo):
                 'nets'
                 ]
     for ds in datasets:
-        if ds == 'cci':
-            dbh = mongo['DataSet_test']
-        else:
-            dbh = mongo[ds]
+        dbh = mongo[ds]
         
 #    indexes_file_name = 'cci/documents/dir.list'
 #    try:
@@ -274,8 +271,6 @@ def get(type, number_of_card="0",  taxonomy ="None",
             return card.size
 
     else:
-        if dataset == 'cci':
-            dataset = 'DataSet_test'
         if mongo is None:
             return
         if type == "doc.html":
@@ -350,8 +345,6 @@ def get(type, number_of_card="0",  taxonomy ="None",
 # Put any file to the database
 def put(type, file,  number_of_card="0",  taxonomy="None", 
                 formula="None",  dataset = 'cci',  mongo=None):
-    if dataset == 'cci':
-        dataset = 'DataSet_test'
     if type == "doc.html":
         key = 'html'
         dbh = mongo[dataset]

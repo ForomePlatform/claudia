@@ -167,19 +167,27 @@ taxes = [
                 'PVD-Words', 
                 'FAMILY'
                 ]
+datasets=[
+            'cci', 
+            'nets', 
+            'medications'
+            ]
 
 def start_annotate(mongo):
-    indexes = get("all_indexes",  mongo=mongo)
-    for number_of_card in indexes:
-        print("Card: " + number_of_card)
-        doc_data = create_dict(number_of_card,  mongo)
-        for sentence in doc_data["sentences"]:
-            for chunk in sentence["chunks"]:
-                par = (mongo, )
-                for tax in taxes:
-                    chunk["data"].update(taxonomy(chunk["text"],  tax,  mongo))
-                chunk["data"].update(IsNumericAnnotator(chunk["text"],  par))
-        put("ch.json",  doc_data,  number_of_card=number_of_card,  mongo=mongo)
+    for dataset in datasets:
+        indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
+        for number_of_card in indexes:
+            print(dataset + ": card #" + number_of_card)
+            doc_data = create_dict(dataset,  number_of_card,  mongo)
+            for sentence in doc_data["sentences"]:
+                for chunk in sentence["chunks"]:
+                    par = (mongo, )
+                    for tax in taxes:
+                        chunk["data"].update(taxonomy(chunk["text"],  tax,  mongo))
+                    chunk["data"].update(IsNumericAnnotator(chunk["text"],  par))
+            put("ch.json",  doc_data, dataset=dataset, 
+                            number_of_card=number_of_card,  mongo=mongo)
+
 
 if __name__ == '__main__':
     mongo = connect()

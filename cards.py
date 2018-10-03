@@ -19,6 +19,8 @@ class CardHandler:
             else:
                 self.dict = json.loads(json_file.read())
                 json_file.close()
+        else:
+            self.dict = {}
         
         # Load DocNNN.html
         doc_name = dataset +'/documents/Doc' + number_of_card + '.html'
@@ -60,3 +62,5 @@ class CardHandler:
                                 break
                     taxes[tax].close()
             self.key_words = ', '.join(keys)
+        else:
+            self.key_words = ''

@@ -177,18 +177,18 @@ class showCard:
             steps['card'] = number_of_card
             steps['steps'] = []
         else:
-            steps = get("steps.json",  mongo=mongo)
+            steps = get("steps.json", dataset=dataset,  mongo=mongo)
         if new_step < len(steps['steps']):
             new_chunks = steps['steps'][new_step]
         else:
             i = len(steps['steps'])
             while i <= new_step:
                 next_step(code, dataset,  number_of_card,  i,  mongo)
-                snap = get("snap.json",  number_of_card=number_of_card,  mongo=mongo)
+                snap = get("snap.json", dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
                 new_chunks = snap
                 steps['steps'].append(new_chunks)
                 i += 1
-            put("steps.json",  steps,  mongo=mongo)
+            put("steps.json",  steps, dataset=dataset, mongo=mongo)
         if step != -1:
             previous_chunks = steps['steps'][step]
         else:
@@ -317,7 +317,7 @@ class showCard:
         div = objectify.SubElement(tab,  'div')
         p1 = etree.fromstring('<p><b>Key words:</b></p>')
         div.append(p1)
-        key_words = get("key_words",  number_of_card=number_of_card,  mongo=mongo)
+        key_words = get("key_words",  dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
         p2 = etree.fromstring('<p>' + ', '.join(key_words) + '</p>')
         div.append(p2)
         hr3 = objectify.SubElement(tab,  'hr')
@@ -333,8 +333,8 @@ class showCard:
 #                    document has next annotations:</b>''')
         p = etree.fromstring('<b>The document has following annotations:</b>')
         div_by_step.append(p)
-        annotations = get('annotations',  number_of_card=number_of_card,  
-                formula='CHF',  mongo=mongo)
+        annotations = get('annotations',  dataset=dataset,  
+                            number_of_card=number_of_card,  formula='CHF',  mongo=mongo)
         if len(annotations) == 0 and new_step != 0:
             div_by_step.p = 'None'
         else:
@@ -351,7 +351,8 @@ class showCard:
         doc.set('class',  'all_chunks')
         center = etree.fromstring('<h1>Document #' + number_of_card +'</h1>')
         doc.append(center)
-        nodes = get("doc.html",  number_of_card=number_of_card,  mongo=mongo)
+        nodes = get("doc.html",  dataset=dataset,  
+                                number_of_card=number_of_card,  mongo=mongo)
         for node in nodes:
             doc.append(etree.fromstring(node))
         hr2 = objectify.SubElement(doc,  'hr')
@@ -367,7 +368,7 @@ class showCard:
         
         apply_anns = objectify.SubElement(tab, 'div')
         apply_anns.set('class',  'apply_anns')
-        file = get("ch.json",  number_of_card=number_of_card,  mongo=mongo)
+        file = get("ch.json", dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
         if file is not None:
             doc_data = file
 
@@ -473,13 +474,17 @@ class showCard:
         title = objectify.SubElement(doc,  'center')
         title.h1 = 'Card #' + number_of_card
         title.h1.set('id',  'title')
+        ds = objectify.SubElement(doc,  'div')
+        ds.b = 'DataSet: ' + dataset
+        ds.b.set('id',  'ds_name')
         carcas0 = objectify.SubElement(doc,  'p')
         carcas = objectify.SubElement(carcas0,  'center')
         
         # Print the table from JSON-file
         table = objectify.SubElement(carcas,  'table')
         table.set('class',  'table')
-        dict = get("doc.json",  number_of_card=number_of_card,  mongo=mongo)
+        dict = get("doc.json",  dataset=dataset,  
+                        number_of_card=number_of_card,  mongo=mongo)
         for field in dict:
             tr = objectify.SubElement(table,  'tr')
             td = etree.fromstring('<td>'+str(field)+'</td>')

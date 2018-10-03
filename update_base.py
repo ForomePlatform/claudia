@@ -12,7 +12,8 @@ if __name__ == '__main__':
     mongo = connect()
     # Only initial docs
     update(mongo)
-    if len(sys.argv) > 2 and sys.argv[2] == '-a':
+    if len(sys.argv) > 1 and sys.argv[1] == '-a':
+        print('Full update...')
         # snapshots
         all_datasets(mongo)
         # chunks

@@ -136,30 +136,41 @@ class showIndex:
         tr = objectify.SubElement(pivot,  'tr')
         td = objectify.SubElement(tr,  'td')
         td.set('class',  'key_cell')
-        ids = get('all_indexes',  mongo=mongo)
+        ids = get('all_indexes',  dataset=ds_selected,  mongo=mongo)
+        print('all: ' + str(ids))
         need_list = []
         for column in apostriory:
             td= objectify.SubElement(tr,  'td')
             td.set('class',  'key_cell')
             td.b = column
-        for row in apriory:
+        if ds_selected == 'cci':
+            rows = apriory
+        else:
+            rows = ['all documents']
+        for row in rows:
             tr = objectify.SubElement(pivot,  'tr')
             td = objectify.SubElement(tr,  'td')
             td.set('class',  'key_cell')
             td.b = row
             for column in apostriory:
-                i = apriory.index(row)
+                i = rows.index(row)
                 j = apostriory.index(column)
                 couple = str(i) + '_' + str(j)
                 td = objectify.SubElement(tr,  'td')
                 td.set('onclick',  'renew_list("cell' + couple +'");')
                 td.set('id',  'cell' + couple)
-                list_apostriory = get('calculated_indexes',  formula='CHF',  mongo=mongo)
+                list_apostriory = get('calculated_indexes',  dataset=ds_selected,
+                                        formula='CHF',  mongo=mongo)
                 if column == 'Other':
                     ids2 = difference(ids,  list_apostriory)
                 else:
                     ids2 = list_apostriory
-                ids3 = get('results_apriory.' + row, dataset=ds_selected,   formula='CHF',  mongo=mongo)
+                print('apostriory: ' + str(ids2))
+                ids3 = get('results_apriory.' + row, dataset=ds_selected, 
+                                        formula='CHF',  mongo=mongo)
+                if ds_selected != 'cci':
+                    ids3 = ids
+                print('apriory: ' + str(ids3))
                 list = intersection(ids2,  ids3)
                 td.i = len(list)
                 if couple in selected:
@@ -212,7 +223,6 @@ class showIndex:
                                         formula='CHF',  mongo=mongo)
         for id in need_list:
             # Generate left list of id  
-            print('#' + id)
             size = str(get("size_of_doc", dataset=ds_selected,  
                                         number_of_card=id,  mongo=mongo))
             diag = ''
@@ -223,6 +233,7 @@ class showIndex:
                                     number_of_card=id,  mongo=mongo)
             abs = abs.replace('>',  '&gt;')
             abs = abs.replace('<',  '&lt;')
+            abs = abs.replace('&',  '&amp;')
             abstract = '<div>' + abs + '...</div>'
             s = '<li>#' + str(id)+' (' + size + ' sentences)' + diag + abstract + '</li>'
             li= objectify.fromstring(s)
