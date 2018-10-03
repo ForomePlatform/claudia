@@ -80,8 +80,7 @@ def update(mongo):
     # Add documents to the base
     datasets = [
                 'cci', 
-                'nets', 
-                'medications'
+                'nets'
                 ]
     for ds in datasets:
         if ds == 'cci':
@@ -146,16 +145,16 @@ def get(type, number_of_card="0",  taxonomy ="None",
             dataset='cci',  mongo=None):
     if from_file:
         if type == "doc.html":
-            card = CardHandler(number_of_card)
+            card = CardHandler(dataset,  number_of_card)
             nodes = []
             for nd in card.nodes:
                 nodes.append(etree.tostring(nd))
             return nodes
         elif type == "doc.json":
-            card = CardHandler(number_of_card)
+            card = CardHandler(dataset,  number_of_card)
             return card.dict
         elif type == "key_words":
-            card = CardHandler(number_of_card)
+            card = CardHandler(dataset,  number_of_card)
             return card.key_words.split(', ')
         elif type == "ch.json":
             file_name = 'cci/chunks/ch' + number_of_card + '.json'
@@ -180,7 +179,7 @@ def get(type, number_of_card="0",  taxonomy ="None",
             else:
                 return snap_file.read()
         elif type == "tax.tset":
-            tax_file_name = 'cci/taxonomies/' + taxonomy + '.tset'
+            tax_file_name = dataset + '/taxonomies/' + taxonomy + '.tset'
             tax_file_name = base + tax_file_name
             try:
                 tax_file  = open(tax_file_name,  'r')
@@ -192,7 +191,7 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 tax_file.close()
                 return res
         elif type == "tax.idx":
-            tax_file_name = 'cci/indexes/' + taxonomy + '.idx'
+            tax_file_name = dataset + '/indexes/' + taxonomy + '.idx'
             tax_file_name = base + tax_file_name
             try:
                 tax_file  = open(tax_file_name,  'r')
@@ -206,7 +205,7 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 tax_file.close()
                 return dict
         elif type == "code.hsir":
-            code_file_name = 'cci/rules/CHF.hsir'
+            code_file_name = dataset + '/rules/CHF.hsir'
             code_file_name = base + code_file_name
             try:
                 code_file  = open(code_file_name,  'r')
@@ -218,7 +217,7 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 code_file.close()
                 return code
         elif type == "code.json":
-            code_file_name = 'cci/rules/CHF.json'
+            code_file_name = dataset + '/rules/CHF.json'
             code_file_name = base + code_file_name
             try:
                 code_file  = open(code_file_name,  'r')
@@ -253,9 +252,9 @@ def get(type, number_of_card="0",  taxonomy ="None",
 #                return indexes
         elif type == "results_apriory":
             try:
-                id_file = open(base + 'cci/indexes/' + formula + '-diagnosed.idx' , 'r')
+                id_file = open(base + dataset + '/indexes/' + formula + '-diagnosed.idx' , 'r')
             except IOError:
-                print('No such file or directory: ' + base + 'cci/indexes/' + formula + '-diagnosed.idx')
+                print('No such file or directory: ' + base + dataset + '/indexes/' + formula + '-diagnosed.idx')
             else:
                 indexes = []
                 for line in id_file:
@@ -264,37 +263,39 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 return indexes
         elif type == "steps.json":
             try:
-                steps_file = open(base + 'cci/viewer/steps.json' , 'r')
+                steps_file = open(base + dataset + '/viewer/steps.json' , 'r')
             except IOError:
-                print('No such file or directory: ' +base + 'cci/viewer/steps.json')
+                print('No such file or directory: ' +base + dataset + '/viewer/steps.json')
             else:
                 steps = json.loads(steps_file)
                 return steps
         elif type == "size_of_doc":
-            card = CardHandler(number_of_card)
+            card = CardHandler(dataset,  number_of_card)
             return card.size
 
     else:
+        if dataset == 'cci':
+            dataset = 'DataSet_test'
         if mongo is None:
             return
         if type == "doc.html":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             doc = dbh.initial_docs.find_one({"id": number_of_card})
             return doc['html']
         elif type == "doc.json":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             doc = dbh.calculated_docs.find_one({"id": number_of_card})
             return json.loads(doc['json'])
         elif type == "key_words":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             doc = dbh.calculated_docs.find_one({"id": number_of_card})
             return doc["key_words"]
         elif type == "ch.json":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             doc = dbh.calculated_docs.find_one({"id": number_of_card})
             return json.loads(doc["chunks"])
         elif type == "snap.json":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             doc = dbh.calculated_docs.find_one({"id": number_of_card})
             return doc["snapshot"]
         elif type == "tax.tset":
@@ -302,7 +303,7 @@ def get(type, number_of_card="0",  taxonomy ="None",
             tax = dbh.taxonomies.find_one({"taxonomy": taxonomy})
             return tax['tset']
         elif type == "tax.idx":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             tax = dbh.indexes.find_one({"taxonomy": taxonomy})
             return tax['idx']
         elif type == "code.hsir":
@@ -314,55 +315,61 @@ def get(type, number_of_card="0",  taxonomy ="None",
             form = dbh.formulas.find_one({"formula": formula})
             return json.loads(form["json"])
         elif type == "all_indexes":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             indexes = dbh.initial_docs.distinct('id')
             return indexes
         elif type == "calculated_indexes":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             indexes = dbh.formula_results.find_one({"formula": formula})
             return indexes["indexes"]
         elif type.split('.')[0] == "results_apriory":
             key = type.split('.')[1]
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             results = dbh.results_apriory.find_one({"formula": formula},  {key: True})
-            return results[key]
+            if results is None:
+                return []
+            else:
+                return results[key]
         elif type == "steps.json":
-            dbh = mongo["DataSet_test"]
+            dbh = mongo[dataset]
             results = dbh.steps.find_one({"formula": formula})
             return results["indexes"]
         elif type == "annotations":
-            dbh = mongo['DataSet_test']
+            dbh = mongo[dataset]
             annotations = dbh.calculated_docs.find_one({'id': number_of_card})
             return annotations["annotations"]
         elif type == "size_of_doc":
-            dbh = mongo['DataSet_test']
+            dbh = mongo[dataset]
             size = dbh.initial_docs.find_one({'id': number_of_card},  {'size': True})
             return size['size']
         elif type == "abstract":
-            dbh = mongo['DataSet_test']
+            dbh = mongo[dataset]
             abstract = dbh.initial_docs.find_one({'id': number_of_card}, {'abstract': True})
             return abstract['abstract']
 
 # Put any file to the database
-def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mongo=None):
+def put(type, file,  number_of_card="0",  taxonomy="None", 
+                formula="None",  dataset = 'cci',  mongo=None):
+    if dataset == 'cci':
+        dataset = 'DataSet_test'
     if type == "doc.html":
         key = 'html'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.initial_docs.update({'id': number_of_card},  q,  upsert=True)
     elif type == "doc.json":
         key = 'json'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: json.dumps(file)}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
     elif type == "ch.json":
         key = 'chunks'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: json.dumps(file)}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
     elif type == "snap.json":
         key = 'snapshot'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
     elif type == "tax.tset":
@@ -372,7 +379,7 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         dbh.taxonomies.update({'taxonomy': taxonomy},  q,  upsert=True)
     elif type == "tax.idx":
         key = 'idx'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.initial_docs.update({'taxonomy': taxonomy},  q,  upsert=True)
     elif type == "code.hsir":
@@ -387,22 +394,22 @@ def put(type, file,  number_of_card="0",  taxonomy="None", formula="None",  mong
         dbh.initial_docs.update({'formula': formula},  q,  upsert=True)
     elif type == "calculated_indexes":
         key = 'indexes'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.formula_results.update({'formula': formula},  q,  upsert=True)
     elif type == "results_apriory":
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         for key in file:
             q = {"$set":  {key: file[key]}}
             dbh.results_apriory.update({'formula': formula},  q,  upsert=True)
     elif type == "steps.json":
         key = 'indexes'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.steps.update({'formula': formula},  q,  upsert=True)
     elif type == "annotations":
         key = 'annotations'
-        dbh = mongo["DataSet_test"]
+        dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
 

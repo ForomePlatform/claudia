@@ -24,36 +24,48 @@ from annotators import IsNumericAnnotator,  taxonomy,  RegExpAnnotator
 #  Apply the interpretator for a step 'step_id' of JSON-code in 'code_file_name'
 #  for a document 'doc_file_name'. 'snap_file_name' is a snaphot file.
 #  It's independent with 'def all_files'.
-def next_step(code,  number_of_card,  step_id,  mongo):
+def next_step(code, dataset, number_of_card,  step_id,  mongo):
 #def next_step(doc_file_name,  code_file_name, snap_file_name, step_id):
     if step_id == 0:
-        doc_data = create_dict(number_of_card,  mongo)
+        doc_data = create_dict(dataset, number_of_card,  mongo)
         doc_data = INA(doc_data, mongo)
-        snapshot(number_of_card,  doc_data,  mongo)
-    doc_data = get("snap.json",  number_of_card=number_of_card,  mongo=mongo)
+        snapshot(dataset,  number_of_card,  doc_data,  mongo)
+    doc_data = get("snap.json", dataset=dataset,  
+                                number_of_card=number_of_card,  mongo=mongo)
     if doc_data is None:
-        doc_data = create_dict(number_of_card,  mongo)
+        doc_data = create_dict(dataset,  number_of_card,  mongo)
     for step in code['statements']:
         if 'statementId' in step and step['statementId'] == step_id:
-            doc_data = json_interpretator(doc_data, number_of_card,  step,  mongo)
+            doc_data = json_interpretator(doc_data, dataset, number_of_card,  step,  mongo)
             break
-    snapshot(number_of_card,  doc_data,  mongo)
+    snapshot(dataset,  number_of_card,  doc_data,  mongo)
+
+# Apply code to all datasets
+def all_datasets(mongo):
+    datasets=[
+                'cci', 
+                'nets', 
+                'medications'
+                ]
+    for ds in datasets:
+        all_files(ds,  mongo)
 
 #  Apply JSON-code for all documents in 'dir.list' and all steps of JSON-code.  
 #  It's independent with 'def all_steps'.
-def all_files(mongo):
+def all_files(dataset,  mongo):
     chf = []
-    indexes = get("all_indexes",  mongo=mongo)
+    indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     for number_of_card in indexes:
         print('Card #' + number_of_card)
-        doc_data = create_dict(number_of_card,  mongo)
+        doc_data = create_dict(dataset,  number_of_card,  mongo)
         code = get("code.json", formula="CHF", mongo=mongo)
-        all_steps(code, json_interpretator, doc_data, number_of_card,  mongo)
+        all_steps(code, json_interpretator, doc_data, dataset,  number_of_card,  mongo)
         put("annotations",  doc_data['data'],  
-                number_of_card=number_of_card, formula ='CHF',  mongo=mongo)
+                dataset=dataset,  number_of_card=number_of_card, formula ='CHF',  mongo=mongo)
         if 'ICHF' in doc_data['data']:
             chf.append(number_of_card)
-    put("calculated_indexes",  chf,  formula='CHF',  mongo=mongo)
+    put("calculated_indexes",  chf,  formula='CHF',  
+                dataset=dataset,  mongo=mongo)
     print(str(len(chf)) + ' documents were annotated by ICHF.')
 
 #  Apply function 'annotator' for all sentence of a document. 'Par' is a tiple of parameters.  
@@ -88,9 +100,9 @@ def all_chunks(annotator,  doc_data, *parp):
 
 #  Apply 'interpretator' for all steps of JSON-code in 'json_file_name' for a document.
 #  'snap_file' is a snapshot file.  
-def all_steps(code,  interpretator,  doc_data,  number_of_card,  mongo):
+def all_steps(code,  interpretator,  doc_data, dataset,  number_of_card,  mongo):
     for step in code['statements']:
-        interpretator(doc_data,  number_of_card, step,  mongo)
+        interpretator(doc_data,  dataset,  number_of_card, step,  mongo)
 
 
 #  *****************************************************************
@@ -99,9 +111,9 @@ def all_steps(code,  interpretator,  doc_data,  number_of_card,  mongo):
 
 #  The interpretator of step 'step' of JSON-code appying for a document ('doc-data').  
 #  Snapshots are in 'snap-file'.  
-def json_interpretator(doc_data,  number_of_card,  step,  mongo):
+def json_interpretator(doc_data, dataset, number_of_card,  step,  mongo):
     if step['type'] == 'pipelink':
-        new_doc_data = pipelink(step,  doc_data,  number_of_card,  mongo)
+        new_doc_data = pipelink(step,  doc_data,  dataset,  number_of_card,  mongo)
         if new_doc_data is not None:
             doc_data = new_doc_data
     elif step['type'] == 'statement':
@@ -122,7 +134,7 @@ def json_interpretator(doc_data,  number_of_card,  step,  mongo):
     return doc_data
 
 #  All statements with type "pipelink" i.e. all shapsots and annotators  
-def pipelink(step,  doc_data,  number_of_card,  mongo):
+def pipelink(step,  doc_data,  dataset,  number_of_card,  mongo):
     if step['name'] == 'restrict entities':
         restrict_entities(step['arguments'])
     elif step['name'] == 'apply_sememes':
@@ -132,7 +144,7 @@ def pipelink(step,  doc_data,  number_of_card,  mongo):
     elif step['name'] == 'RegExpAnnotator':
         return REA(step['data'],  doc_data)
     elif step['name'] == 'snapshot':
-        snapshot(number_of_card,  doc_data,  mongo)
+        snapshot(dataset,  number_of_card,  doc_data,  mongo)
     elif step['name'] == 'watchpoint':
         watchpoint()
     elif step['name'] == 'IKAllEntitiesPlugin':
@@ -369,9 +381,9 @@ def annotation_data(data,  dict):
 #  **************************************************************
 
 #  Save all results about a document in file 'file_name'. 
-def snapshot(number_of_card,  doc_data,  mongo):
+def snapshot(dataset,  number_of_card,  doc_data,  mongo):
     #file = json.dumps(doc_data,  indent = 4)
-    put("snap.json",  doc_data,  number_of_card=number_of_card,  mongo=mongo)
+    put("snap.json",  doc_data,  dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
 
 #  It's like a snapshot. But I don't know the difference. Not finished.
 def watchpoint():
@@ -390,12 +402,13 @@ def watchpoint():
 #  data: '{key: value, ... }
 #
 #  Attribute 'data' is empty.  
-def create_dict(number_of_card,  mongo):
+def create_dict(dataset,  number_of_card,  mongo):
     doc_data = {}
     doc_data['data'] = {}
     doc_data['sentences'] = []
     #sHTML_Parser = etree.HTMLParser(remove_comments = True)
-    samples = get("doc.html",  number_of_card=number_of_card,  mongo=mongo)
+    samples = get("doc.html",  dataset=dataset,  
+                                number_of_card=number_of_card,  mongo=mongo)
     for node in samples:
         sample = etree.fromstring(node)
         sentence = {}
@@ -421,5 +434,6 @@ def create_dict(number_of_card,  mongo):
 
 if __name__ == '__main__':
     mongo = connect()
-    all_files(mongo)
+    #all_files(mongo)
+    all_datasets(mongo)
     print('Ok.')

@@ -2,7 +2,7 @@ import sys
 from mongodb import connect
 from mongodb import update
 from start_annotate import start_annotate
-from main_interpretator import all_files
+from main_interpretator import all_datasets
 from csv_to_json import csv_to_json
 
 # This script update the data base.
@@ -14,7 +14,7 @@ if __name__ == '__main__':
     update(mongo)
     if len(sys.argv) > 2 and sys.argv[2] == '-a':
         # snapshots
-        all_files(mongo)
+        all_datasets(mongo)
         # chunks
         start_annotate(mongo)
         # indexes of apriory diagnosed docs

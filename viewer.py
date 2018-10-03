@@ -28,6 +28,10 @@ apriory = [
             'symptoms present', 
             'other'
             ]
+datasets = [
+            'cci', 
+            'nets'
+            ]
 
 def intersection(list1,  list2):
     res = []
@@ -86,9 +90,15 @@ class showIndex:
             selected = args['selected'].split('*')[1:]
         else:
             selected = []
+        if 'ds' in args:
+            ds_selected = args['ds']
+        else:
+            ds_selected = 'cci'
         # Head  
         root = objectify.Element('html')
         head = objectify.SubElement(root, 'head')
+#        head.script = ""
+#        head.script.set('src', 'https://cdn.jsdelivr.net/npm/vue')
         head.title = "Medical cards"
         head.script = ""
         head.script.set('src',  config['addr'] + config['html-base'] + 'viewer.js' + version)
@@ -98,7 +108,7 @@ class showIndex:
         head.style = '@import url(' + url + ')'
         # Body  
         body = objectify.SubElement(root,  'body')
-        url = '' + config['addr'] + config['html-base'] +'aquamarine-cubes.png' + version
+        url = config['addr'] + config['html-base'] +'aquamarine-cubes.png' + version
         body.set('style', 'background-image: url(' + url + ')')
         body.set('id',  'main')
         # Left part of page  
@@ -113,7 +123,7 @@ class showIndex:
         claudia = objectify.SubElement(emblem,  'div')
         claudia.set('class',  'claudia')
         img = objectify.SubElement(claudia,  'img')
-        img.set('src',  'emblem_shadow.png')
+        img.set('src',  config['addr'] + config['html-base'] + 'emblem_shadow.png')
         ws = objectify.SubElement(emblem,  'div')
         ws.set('class',  'workspace')
         ws_div = objectify.SubElement(ws,  'div')
@@ -149,7 +159,7 @@ class showIndex:
                     ids2 = difference(ids,  list_apostriory)
                 else:
                     ids2 = list_apostriory
-                ids3 = get('results_apriory.' + row,  formula='CHF',  mongo=mongo)
+                ids3 = get('results_apriory.' + row, dataset=ds_selected,   formula='CHF',  mongo=mongo)
                 list = intersection(ids2,  ids3)
                 td.i = len(list)
                 if couple in selected:
@@ -177,7 +187,8 @@ class showIndex:
         if tax_selected == 'None':
             ids1 = ids
         else:
-            ids1 = get("tax.idx",  taxonomy=tax_selected,  mongo=mongo)
+            ids1 = get("tax.idx", dataset=ds_selected,  
+                            taxonomy=tax_selected,  mongo=mongo)
         if flag1 == 'false':
             need_list = intersection(need_list,  ids1)
         else:
@@ -194,17 +205,22 @@ class showIndex:
         scroll.set('class',  'scroll')
         ul = objectify.SubElement(scroll,  'ul')
         ul.set('class',  'pink')
+        ul.set('id',  'card_list')
         chf = {}
         for stat in apriory:
-            chf[stat] = get("results_apriory." + stat,  formula='CHF',  mongo=mongo)
+            chf[stat] = get("results_apriory." + stat,  dataset = ds_selected,  
+                                        formula='CHF',  mongo=mongo)
         for id in need_list:
             # Generate left list of id  
-            size = str(get("size_of_doc",  number_of_card=id,  mongo=mongo))
+            print('#' + id)
+            size = str(get("size_of_doc", dataset=ds_selected,  
+                                        number_of_card=id,  mongo=mongo))
             diag = ''
             for stat in apriory:
                 if id in chf[stat]:
                     diag = ': CHF-' + stat
-            abs = get('abstract',  number_of_card=id,  mongo=mongo)
+            abs = get('abstract',  dataset=ds_selected,  
+                                    number_of_card=id,  mongo=mongo)
             abs = abs.replace('>',  '&gt;')
             abs = abs.replace('<',  '&lt;')
             abstract = '<div>' + abs + '...</div>'
@@ -214,8 +230,20 @@ class showIndex:
             li.set('onmouseover',  'show_abstract(' + id + ');')
             li.set('onmouseout',  'hide_abstract(' + id + ');')
             li.set('id',  'number'+str(id))
+#            li.set('@click',  'card_list.card_selected = ' + id)
             li.set('class',  'pinkli')
+#            li.set('v-if',  'card_list.card_selected == ' + id)
             ul.append(li)
+            
+#            li= objectify.fromstring(s)
+#            li.set('onclick',  'show_card('+str(id)+');')
+#            li.set('onmouseover',  'show_abstract(' + id + ');')
+#            li.set('onmouseout',  'hide_abstract(' + id + ');')
+#            li.set('id',  'number'+str(id))
+#            li.set('@click',  'card_list.card_selected = ' + id)
+#            li.set('class',  'pinkli')
+#            li.set('v-else',  '')
+#            ul.append(li)
         # Right part of page  
         td2 = objectify.SubElement(body,  'div')
         td2.set('class',  'right_column')
@@ -257,6 +285,20 @@ class showIndex:
                 continue
             option = etree.fromstring('<option>'+tax+'</option>')
             option.set('value',  tax)
+            select.append(option)
+        # DataSets
+        formulas = objectify.SubElement(filters_panel,  'div')
+        formulas.set('class',  'filters')
+        formulas.div = 'Data Set:'
+        formulas.div.set('class',  'filter_name')
+        select = objectify.SubElement(formulas,  'select')
+        select.set('class',  'select')
+        select.set('onchange',  'filter();')
+        select.set('id',  'dataset')
+        for ds in datasets:
+            option = etree.fromstring('<option>' + ds + '</option>')
+            if ds == ds_selected:
+                option.set('selected',  'selected')
             select.append(option)
         # Formulas
         formulas = objectify.SubElement(filters_panel,  'div')

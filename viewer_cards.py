@@ -43,6 +43,10 @@ class showCard:
             panel_align = args['panel_align']
         else:
             panel_align = 'apply_anns_left'
+        if 'ds' in args:
+            dataset = args['ds']
+        else:
+            dataset = 'cci'
 
         # Head  
         root = objectify.Element('html')
@@ -179,7 +183,7 @@ class showCard:
         else:
             i = len(steps['steps'])
             while i <= new_step:
-                next_step(code, number_of_card,  i,  mongo)
+                next_step(code, dataset,  number_of_card,  i,  mongo)
                 snap = get("snap.json",  number_of_card=number_of_card,  mongo=mongo)
                 new_chunks = snap
                 steps['steps'].append(new_chunks)
