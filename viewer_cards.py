@@ -376,7 +376,7 @@ class showCard:
             div = objectify.SubElement(apply_anns,  'div')
             
             label = objectify.SubElement(tab, 'div')
-            label.set('class',  'label')
+            label.set('class',  'label_left')
             
             # Tab 4: Chunks
             all_chunks = objectify.SubElement(tab, 'div')

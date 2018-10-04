@@ -137,7 +137,6 @@ class showIndex:
         td = objectify.SubElement(tr,  'td')
         td.set('class',  'key_cell')
         ids = get('all_indexes',  dataset=ds_selected,  mongo=mongo)
-        print('all: ' + str(ids))
         need_list = []
         for column in apostriory:
             td= objectify.SubElement(tr,  'td')
@@ -165,12 +164,10 @@ class showIndex:
                     ids2 = difference(ids,  list_apostriory)
                 else:
                     ids2 = list_apostriory
-                print('apostriory: ' + str(ids2))
                 ids3 = get('results_apriory.' + row, dataset=ds_selected, 
                                         formula='CHF',  mongo=mongo)
                 if ds_selected != 'cci':
                     ids3 = ids
-                print('apriory: ' + str(ids3))
                 list = intersection(ids2,  ids3)
                 td.i = len(list)
                 if couple in selected:

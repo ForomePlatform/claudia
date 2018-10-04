@@ -1,6 +1,4 @@
 import re
-import json
-from lxml import etree
 from mongodb import get
 from mongodb import put
 
@@ -85,88 +83,88 @@ def taxonomy(text,  tax,  mongo):
     return dict
 
 #  'Baby version' of the interpretator. It was realised for SimpleRule1.json.  
-def json_interpretator(json_file_name):
-    try:
-        file = open(json_file_name,  'r')
-    except IOError:
-        print('No such file or directory: ' + json_file_name)
-    else:
-        code = json.loads(file.read())
-        file.close()
-        try:
-            id_file = open('cci/documents/dir.list', 'r')
-        except IOError:
-            print('No such file or directory: cci/documents/dir.list')
-        else:
-            for line in id_file:
-                number_of_card = line.strip()
-                file_name = "cci/documents/Doc" + number_of_card + ".html"
-                print('File: ' + file_name)
-                # file_name = code['context']['domainID']
-                sHTML_Parser = etree.HTMLParser(remove_comments = True)
-                try:
-                    inp = open(file_name,  'rb')
-                except IOError:
-                    print('No such file or directory: ' + file_name)
-                    return
-                else:
-                    doc = etree.parse(inp, sHTML_Parser)
-                    top = 0
-                    nchunk = 0
-                    chunks = []
-                    for sample in doc.xpath('/html/body/p'):
-                        sentence = []
-                        s = etree.tostring(sample)
-                        ss = etree.fromstring(s)
-                        for nd in ss.xpath('/p/span/span/span/span'):
-                            if nchunk > top:
-                                break
-                            nchunk += 1
-                            chunk = {}
-                            chunk['text'] = nd.text
-                            dict = {}
-                            for step in code['statements']:
-                                if 'name' in step:
-                                    if step['name'] == 'restrict entities':
-                                        top = step['arguments'][0]['value']['value']
-                                    elif step['name'] == 'apply_sememes':
-                                        # for tax in step['arguments'][0]['value']:
-                                        for tax in taxes:
-                                            dict.update(taxonomy(nd.text, tax))
-                                    elif step['name'] == 'IsNumericAnnotator':
-                                        dict.update(IsNumericAnnotator(nd.text))
-                                    elif step['name'] == 'RegExpAnnotator':
-                                        for arg in step['arguments']:
-                                            if arg['name'] == 'Pattern':
-                                                pattern = arg['value']['value']
-                                                if RegExpAnnotator(nd.text,  pattern) is not None:
-                                                    dict.update(RegExpAnnotator(nd.text,  pattern))
-                            chunk['data'] = dict
-                            sentence.append(chunk)
-                        chunks.append(sentence)
-                    inp.close()
-                    
-                    file_name = 'cci/chunks/ch' + number_of_card + '.json'
-                    try:
-                        file = open(file_name,  'w')
-                    except IOError:
-                        print('No such directory: ' + file_name)
-                        return
-                    else:
-                        file.write(json.dumps(chunks,  indent = 4))
-                    file.close()
+#def json_interpretator(json_file_name):
+#    try:
+#        file = open(json_file_name,  'r')
+#    except IOError:
+#        print('No such file or directory: ' + json_file_name)
+#    else:
+#        code = json.loads(file.read())
+#        file.close()
+#        try:
+#            id_file = open('cci/documents/dir.list', 'r')
+#        except IOError:
+#            print('No such file or directory: cci/documents/dir.list')
+#        else:
+#            for line in id_file:
+#                number_of_card = line.strip()
+#                file_name = "cci/documents/Doc" + number_of_card + ".html"
+#                print('File: ' + file_name)
+#                # file_name = code['context']['domainID']
+#                sHTML_Parser = etree.HTMLParser(remove_comments = True)
+#                try:
+#                    inp = open(file_name,  'rb')
+#                except IOError:
+#                    print('No such file or directory: ' + file_name)
+#                    return
+#                else:
+#                    doc = etree.parse(inp, sHTML_Parser)
+#                    top = 0
+#                    nchunk = 0
+#                    chunks = []
+#                    for sample in doc.xpath('/html/body/p'):
+#                        sentence = []
+#                        s = etree.tostring(sample)
+#                        ss = etree.fromstring(s)
+#                        for nd in ss.xpath('/p/span/span/span/span'):
+#                            if nchunk > top:
+#                                break
+#                            nchunk += 1
+#                            chunk = {}
+#                            chunk['text'] = nd.text
+#                            dict = {}
+#                            for step in code['statements']:
+#                                if 'name' in step:
+#                                    if step['name'] == 'restrict entities':
+#                                        top = step['arguments'][0]['value']['value']
+#                                    elif step['name'] == 'apply_sememes':
+#                                        # for tax in step['arguments'][0]['value']:
+#                                        for tax in taxes:
+#                                            dict.update(taxonomy(nd.text, tax))
+#                                    elif step['name'] == 'IsNumericAnnotator':
+#                                        dict.update(IsNumericAnnotator(nd.text))
+#                                    elif step['name'] == 'RegExpAnnotator':
+#                                        for arg in step['arguments']:
+#                                            if arg['name'] == 'Pattern':
+#                                                pattern = arg['value']['value']
+#                                                if RegExpAnnotator(nd.text,  pattern) is not None:
+#                                                    dict.update(RegExpAnnotator(nd.text,  pattern))
+#                            chunk['data'] = dict
+#                            sentence.append(chunk)
+#                        chunks.append(sentence)
+#                    inp.close()
+#                    
+#                    file_name = 'cci/chunks/ch' + number_of_card + '.json'
+#                    try:
+#                        file = open(file_name,  'w')
+#                    except IOError:
+#                        print('No such directory: ' + file_name)
+#                        return
+#                    else:
+#                        file.write(json.dumps(chunks,  indent = 4))
+#                    file.close()
 
 
-taxes = [
-                'Cardio-Loc', 
-                'CHF-Words', 
-                'DECLINE', 
-                'dementia', 
-                'MentalStatus', 
-                'MI-Words', 
-                'PVD-Words', 
-                'FAMILY'
-                ]
+taxes = {
+                'Cardio-Loc': [], 
+                'CHF-Words': [], 
+                'DECLINE': [], 
+                'dementia': [], 
+                'MentalStatus': [], 
+                'MI-Words': [], 
+                'PVD-Words': [], 
+                'FAMILY': []
+                }
 datasets=[
             'cci', 
             'nets', 
@@ -178,15 +176,26 @@ def start_annotate(mongo):
         indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
         for number_of_card in indexes:
             print(dataset + ": card #" + number_of_card)
+            key_words = set()
             doc_data = create_dict(dataset,  number_of_card,  mongo)
             for sentence in doc_data["sentences"]:
                 for chunk in sentence["chunks"]:
                     par = (mongo, )
                     for tax in taxes:
-                        chunk["data"].update(taxonomy(chunk["text"],  tax,  mongo))
+                        dict = taxonomy(chunk["text"],  tax,  mongo)
+                        chunk["data"].update(dict)
+                        if dict != {}:
+                            key_words.add(tax)
+                        if dict != {} and (taxes[tax]==[] or 
+                                                    taxes[tax][len(taxes[tax])-1]!=number_of_card):
+                            taxes[tax].append(number_of_card)
                     chunk["data"].update(IsNumericAnnotator(chunk["text"],  par))
             put("ch.json",  doc_data, dataset=dataset, 
                             number_of_card=number_of_card,  mongo=mongo)
+            put("key_words",  list(key_words), dataset=dataset,  
+                            number_of_card=number_of_card,  mongo=mongo)
+        for tax in taxes:
+            put('tax.idx',  taxes[tax], taxonomy=tax,  dataset=dataset, mongo=mongo)
 
 
 if __name__ == '__main__':

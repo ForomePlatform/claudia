@@ -71,7 +71,7 @@ def load_doc(dataset,  id,  mongo):
     
     file = card.dict
     doc['json'] = json.dumps(file)
-    doc['key_words'] = card.key_words.split(', ')
+    doc['key_words'] = [] #card.key_words.split(', ')
     
     q = {"$set":  {key: doc[key] for key in doc}}
     dbh.calculated_docs.update({'id': doc['id'],  'patient': doc['patient']},  q, upsert=True)
@@ -374,17 +374,17 @@ def put(type, file,  number_of_card="0",  taxonomy="None",
         key = 'idx'
         dbh = mongo[dataset]
         q = {"$set":  {key: file}}
-        dbh.initial_docs.update({'taxonomy': taxonomy},  q,  upsert=True)
+        dbh.indexes.update({'taxonomy': taxonomy},  q,  upsert=True)
     elif type == "code.hsir":
         key = 'hsir'
         dbh = mongo["claudia"]
         q = {"$set":  {key: file}}
-        dbh.initial_docs.update({'formula': formula},  q,  upsert=True)
+        dbh.formulas.update({'formula': formula},  q,  upsert=True)
     elif type == "code.json":
         key = 'json'
         dbh = mongo["claudia"]
         q = {"$set":  {key: file}}
-        dbh.initial_docs.update({'formula': formula},  q,  upsert=True)
+        dbh.formulas.update({'formula': formula},  q,  upsert=True)
     elif type == "calculated_indexes":
         key = 'indexes'
         dbh = mongo[dataset]
@@ -405,12 +405,9 @@ def put(type, file,  number_of_card="0",  taxonomy="None",
         dbh = mongo[dataset]
         q = {"$set":  {key: file}}
         dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
+    elif type == "key_words":
+        key = 'key_words'
+        dbh = mongo[dataset]
+        q = {"$set":  {key: file}}
+        dbh.calculated_docs.update({'id': number_of_card},  q,  upsert=True)
 
-#if __name__ == '__main__':
-#    mongo = connect()
-#    update(mongo)
-#    if len(sys.args) > 2 and sys.args[2] == '-a':
-#        all_files(mongo)
-#        start_annotate(mongo)
-#        csv_to_json(mongo)
-#    print('Ok')
