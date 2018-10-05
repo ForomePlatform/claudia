@@ -80,7 +80,8 @@ def update(mongo):
     # Add documents to the base
     datasets = [
                 'cci', 
-                'nets'
+                'nets', 
+                'medications'
                 ]
     for ds in datasets:
         dbh = mongo[ds]
@@ -131,7 +132,7 @@ def update(mongo):
     formula['formula'] = 'CHF'
     formula['version'] = 0
     formula['hsir'] = get("code.hsir",  from_file=True)
-    formula['json'] = json.dumps(get("code.json",  from_file=True),  indent=4)
+    formula['json'] = json.dumps(get("code.json",  from_file=True))
     q = {"$set": {key: formula[key] for key in formula}}
     dbh.formulas.update({"formula": "CHF"},  formula, upsert=True)
     

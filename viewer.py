@@ -16,8 +16,8 @@ taxes = [
             'PVD-Words'
             ]
 apostriory = [
-            'Other', 
-            'ICHF'
+            'ICHF', 
+            'Other'
             ]
 apriory = [
             'not mentioned', 
@@ -30,7 +30,8 @@ apriory = [
             ]
 datasets = [
             'cci', 
-            'nets'
+            'nets', 
+            'medications'
             ]
 
 def intersection(list1,  list2):
@@ -66,34 +67,23 @@ class showIndex:
             tax_selected = args['tax']
         else:
             tax_selected = 'None'
-#        if 'filter2_selected' in args:
-#            filter2_selected = args['filter2_selected']
-#        else:
-#            filter2_selected = 'None'
-#        if 'filter3_selected' in args:
-#            filter3_selected = args['filter3_selected']
-#        else:
-#            filter3_selected = 'None'
         if 'flag1' in args:
             flag1 = args['flag1']
         else:
             flag1 = 'false'
-#        if 'flag2' in args:
-#            flag2 = args['flag2']
-#        else:
-#            flag2 = 'false'
-#        if 'flag3' in args:
-#            flag3 = args['flag3']
-#        else:
-#            flag3 = 'false'
         if 'selected' in args:
             selected = args['selected'].split('*')[1:]
         else:
-            selected = []
+            selected = ['0_0']
         if 'ds' in args:
             ds_selected = args['ds']
         else:
             ds_selected = 'cci'
+        cards_in_one_portion = 100
+        if 'portion' in args:
+            portion = int(int(args['portion'].split(' - ')[0])/cards_in_one_portion)
+        else:
+            portion = 0
         # Head  
         root = objectify.Element('html')
         head = objectify.SubElement(root, 'head')
@@ -114,7 +104,6 @@ class showIndex:
         # Left part of page  
         td1 = objectify.SubElement(body,  'div')
         td1.set('class',  'left_column')
-        # Filters
         menu = objectify.SubElement(td1,  'div')
         menu.set('class',  'menu')
         # Emblem
@@ -207,7 +196,27 @@ class showIndex:
             count.span = '''Choose several cells in the table in order to see a list of cards.'''
         else:
             count.span = '''Every card in following list has chosen annotations.'''
-                            #or has not them if option "NOT" was indicated.'''
+        if len(need_list) > cards_in_one_portion:
+            # Portions of cards
+            portions = objectify.SubElement(menu,  'div')
+            portions.set('class',  'filters')
+            portions.b = 'Show cards from the interval:'
+            portions.b.set('class',  'filter_name')
+            select = objectify.SubElement(portions,  'select')
+            select.set('class',  'select')
+            select.set('onchange',  'filter();')
+            select.set('id',  'portions')
+            for n in range(int((len(need_list)-1)/cards_in_one_portion)+1):
+                if n != int(len(need_list)/cards_in_one_portion):
+                    portion_size = str(n*cards_in_one_portion + 1) + ' - ' + str((n+1)*cards_in_one_portion)
+                else:
+                    portion_size = str(n*cards_in_one_portion +1) + ' - ' + str(len(need_list))
+                option = etree.fromstring('<option>' + portion_size + '</option>')
+                if portion == n:
+                    option.set('selected',  'selected')
+                select.append(option)
+            need_list = need_list[portion*cards_in_one_portion:(portion+1)*cards_in_one_portion]
+        
         # List of numbers  
         scroll = objectify.SubElement(td1,  'div')
         scroll.set('class',  'scroll')
