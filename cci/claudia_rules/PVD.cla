@@ -1,0 +1,155 @@
+import NUMERIC
+from sememes import PVD_Words, Cardio_Loc, FAMILY, CHRONIC
+
+collection.lookup(PVD_Words, Cardio_Loc, FAMILY, 
+                            CHRONIC, NUMERIC)
+
+PVD_DIAGNOSIS = collection.defineAnnotation("PVD_DIAGNOSIS", 
+                   symptom={"occlusion", "bypass"})
+
+PVD_SYMPTOM = collection.defineAnnotation("PVD_SYMPTOM", 
+                   symptom={"venous_insufficiency", "low_ABI"})
+
+PVD_IGNORE = collection.defineAnnotation("PVD_IGNORE", 
+                   symptom={"occlusion"})
+
+VESSELS = collection.defineAnnotation("VESSELS")
+
+for entity in collections.entities():
+
+    if entity.annotated(PVD_Words, diagnosis="PVD"):
+        entity.annotate(PVD_DIAGNOSIS)
+
+    if entity.annotated(PVD_Words, condition="VI"):
+        if entity.annotated(CHRONIC):
+            entity.annotate(PVD_DIAGNOSIS)
+        else:
+            entity.annotate(PVD_SYMPTOM,                               
+                      symptom="venous_insufficiency")
+
+    if entity.annotated(PVD_Words, condition="ABI")
+                 and entity.annotated(NUMERIC, less_than=1):
+        entity.annotate(PVD_SYMPTOM, symptom="low_ABI")
+
+    if entity.annotated(PVD_Words, condition="occlusion"):
+        if entity.annotated(Cardio_Loc, type="periphery"):
+            entity.annotate(PVD_DIAGNOSIS, symptom="occlusion")
+        else:
+            entity.annotated(PVD_IGNORE, symptom="occlusion")
+
+        if not entity.annotated(Cardio_Loc):
+            entity.annotate(VESSELS)
+
+    if entity.annotated(PVD_Words, procedure="bypass"):
+        if entity.annotated(PVD_Words, type="periphery"):
+            entity.annotate(PVD_DIAGNOSIS, symptom="bypass")
+        else:
+            entity.annotate(BYPASS)
+
+    if not entity.annotated(PVD_Words)
+                  and not entity.annotated(Cardio_Loc)
+                  and not entity.annotated(FAMILY):
+        entity.reject()
+
+PVD_Related = collection.defineAnnotation("PVD_Related", 
+                  value={"diagnosed", "negated", "uncertatin", 
+                         "symptoms", "other_bypass", "bypass", 
+                         "other_vessels_problem", "occlusion"}, 
+                  diagnosis={"PVD"}, 
+                  symptom={"low_ABI", "bypass", "vessels"})
+
+for sentence in collection.sentences():
+
+    if not sentence.annotated(PVD_Words):
+        sentence.reject()
+
+    if sentence.annotated(PVD_DIAGNOSIS, context="affirmative"):
+        sentence.annotate(PVD_Related, value="diagnosed", 
+                                diagnosis="PVD")
+
+        if sentence.annotated(PVD_Words, partial="PVD", 
+                               part="peripheral")
+                        and sentence.annotated(PVD_Words,     
+                               partial="PVD", part="vascular")
+                        and sentence.annotated(PVD_Words, 
+                               partial="PVD", part="disease"):
+            sentence.annotate(PVD_Related, value="diagnosed", 
+                               diagnosis="PVD")
+
+    if sentence.annotated(PVD_DIAGNOSIS, context="negative"):
+        sentence.annotate(PVD_Related, value="negated")
+
+    if sentence.annotated(PVD_DIAGNOSIS, context="ambiguous"):
+        sentence.annotate(PVD_Related, value="uncertain")
+
+    if sentence.annotated(PVD_Words, condition="ABI")
+                   and sentence.annotated(NUMERIC, less_than=1):
+        sentence.annotate(PVD_Related, value="symptoms", 
+                   symptom="low_ABI")
+
+    if sentence.annotated(BYPASS):
+        if sentence.annotated(Cardio_Loc, type="periphery"):
+            sentence.annotate(PVD_Related, value="symptoms", 
+                   symptom="bypass")
+        else:
+            sentence.annotate(PVD_Related, value="other_bypass")
+
+        if not sentence.annotated(Cardio_Loc):
+            sentence.annotate(PVD_Related, value="bypass", 
+                    symptom="bypass")
+
+    if sentence.annotated(VESSELS):
+        if sentence.annotated(Cardio_Loc, type="periphery"):
+            sentence.annotate(PVD_Related, value="diagnosed", 
+                    diagnosis="PVD")
+        else:
+            sentence.annotate(PVD_Related, 
+                    value="other_vessels_problem")
+
+        if not sentence.annotated(Cardio_Loc):
+            sentence.annotate(PVD_Related, value="occlusion", 
+                    symptom="vessels")
+
+    if sentence.annotated(PVD_SYMPTOM):
+        sentence.annotate(PVD_Related, value="symptoms")
+
+    if sentence.annotated(FAMILY):
+        sentence.reject()
+
+IPVD = collection.defineAnnotation("IPVD", 
+                 value={"diagnosed", "ruled_out", "ambiguous", 
+                        "symptom_present", "inconclusive"})
+
+for document in collection.documents():
+
+    if document.annotated(PVD_Related, diagnosis="PVD")
+                    and document.annotated(PVD_Related, 
+                    value="negated", count=0):
+        document.annotate(IPVD, value="diagnosed")
+
+    if document.annotated(PVD_Related, value="negated"):
+        if document.annotated(PVD_Related, value="diagnosed", count=0):
+            document.annotate(IPVD, value="ruled_out")
+        else:
+            document.annotate(IPVD, value="ambiguous")
+
+    else:
+        if document.annotated(PVD_Related, value="negated", count=0):
+            if document.annotated(PVD_Related, value="symptoms"):
+                document.annotate(IPVD, value="symptom_present")
+
+            if document.annotated(PVD_Related, value="bypass")
+                    and document.annotated(PVD_Related, 
+                    value="other_bypass", count=0):
+                document.annotate(IPVD, value="inconclusive")
+
+            if document.annotated(PVD_Related, value="occlusion")
+                    and document.annotated(PVD_Related, 
+                    value="other_vessels_problem", count=0):
+                document.annotate(IPVD, value="inconclusive")
+
+    if document.annotated(PVD_Related, value="uncertain")
+                    and not document.annotated(IPVD):
+        document.annotate(IPVD, value="inconclusive")
+
+collection.setFinalAnnotation(IPVD)

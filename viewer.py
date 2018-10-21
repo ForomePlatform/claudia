@@ -196,26 +196,6 @@ class showIndex:
             count.span = '''Choose several cells in the table in order to see a list of cards.'''
         else:
             count.span = '''Every card in following list has chosen annotations.'''
-        if len(need_list) > cards_in_one_portion:
-            # Portions of cards
-            portions = objectify.SubElement(menu,  'div')
-            portions.set('class',  'filters')
-            portions.b = 'Show cards from the interval:'
-            portions.b.set('class',  'filter_name')
-            select = objectify.SubElement(portions,  'select')
-            select.set('class',  'select')
-            select.set('onchange',  'filter();')
-            select.set('id',  'portions')
-            for n in range(int((len(need_list)-1)/cards_in_one_portion)+1):
-                if n != int(len(need_list)/cards_in_one_portion):
-                    portion_size = str(n*cards_in_one_portion + 1) + ' - ' + str((n+1)*cards_in_one_portion)
-                else:
-                    portion_size = str(n*cards_in_one_portion +1) + ' - ' + str(len(need_list))
-                option = etree.fromstring('<option>' + portion_size + '</option>')
-                if portion == n:
-                    option.set('selected',  'selected')
-                select.append(option)
-            need_list = need_list[portion*cards_in_one_portion:(portion+1)*cards_in_one_portion]
         
         # List of numbers  
         scroll = objectify.SubElement(td1,  'div')
@@ -224,10 +204,13 @@ class showIndex:
         ul.set('class',  'pink')
         ul.set('id',  'card_list')
         chf = {}
+        if portion*cards_in_one_portion > len(need_list):
+            portion = 0
+        cut_need_list = need_list[portion*cards_in_one_portion:(portion+1)*cards_in_one_portion]
         for stat in apriory:
             chf[stat] = get("results_apriory." + stat,  dataset = ds_selected,  
                                         formula='CHF',  mongo=mongo)
-        for id in need_list:
+        for id in cut_need_list:
             # Generate left list of id  
             size = str(get("size_of_doc", dataset=ds_selected,  
                                         number_of_card=id,  mongo=mongo))
@@ -240,8 +223,10 @@ class showIndex:
             abs = abs.replace('>',  '&gt;')
             abs = abs.replace('<',  '&lt;')
             abs = abs.replace('&',  '&amp;')
-            abstract = '<div>' + abs + '...</div>'
-            s = '<li>#' + str(id)+' (' + size + ' sentences)' + diag + abstract + '</li>'
+            abstract = etree.fromstring('<div>' + abs + '...</div>')
+            abstract.set('id',  'abs' + str(id))
+            abstract.set('class',  'hide_abstract')
+            s = '<li>#' + str(id)+' (' + size + ' sentences)' + diag +'</li>'
             li= objectify.fromstring(s)
             li.set('onclick',  'show_card('+str(id)+');')
             li.set('onmouseover',  'show_abstract(' + id + ');')
@@ -251,6 +236,7 @@ class showIndex:
             li.set('class',  'pinkli')
 #            li.set('v-if',  'card_list.card_selected == ' + id)
             ul.append(li)
+            li.append(abstract)
             
 #            li= objectify.fromstring(s)
 #            li.set('onclick',  'show_card('+str(id)+');')
@@ -328,6 +314,27 @@ class showIndex:
         select.set('id',  'select_formulas')
         option = etree.fromstring('<option>CHF</option>')
         select.append(option)
+        
+        # Portions of cards
+        if len(need_list) > cards_in_one_portion:
+            portions = objectify.SubElement(filters_panel,  'div')
+            portions.set('class',  'filters')
+            portions.div = 'Show cards from the interval:'
+            portions.div.set('class',  'filter_name')
+            select = objectify.SubElement(portions,  'select')
+            select.set('class',  'select')
+            select.set('onchange',  'filter();')
+            select.set('id',  'portions')
+            for n in range(int((len(need_list)-1)/cards_in_one_portion)+1):
+                if n != int(len(need_list)/cards_in_one_portion):
+                    portion_size = str(n*cards_in_one_portion + 1) + ' - ' + str((n+1)*cards_in_one_portion)
+                else:
+                    portion_size = str(n*cards_in_one_portion +1) + ' - ' + str(len(need_list))
+                option = etree.fromstring('<option>' + portion_size + '</option>')
+                if portion == n:
+                    option.set('selected',  'selected')
+                select.append(option)
+        
         # Print to file  
         objectify.deannotate(root)
         etree.cleanup_namespaces(root)

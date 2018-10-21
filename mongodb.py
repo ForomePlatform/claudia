@@ -214,6 +214,18 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 code = code_file.read()
                 code_file.close()
                 return code
+        elif type == "code.cla":
+            code_file_name = dataset + '/claudia_rules/' + formula + '.cla'
+            code_file_name = base + code_file_name
+            try:
+                code_file  = open(code_file_name,  'r')
+            except IOError:
+                print('No such file or directory: ' + code_file_name)
+                return
+            else:
+                code = code_file.read()
+                code_file.close()
+                return code
         elif type == "code.json":
             code_file_name = dataset + '/rules/CHF.json'
             code_file_name = base + code_file_name

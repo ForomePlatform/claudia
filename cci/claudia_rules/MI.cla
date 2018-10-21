@@ -1,0 +1,70 @@
+import NUMERIC, RegExp
+from sememes import MI_Words, FAMILY
+
+collection.lookup(MI_Words, FAMILY, NUMERIC)
+
+MI_Entity = collection.defineAnnotation("MI_Entity", diagnosis = {"MI"}, protocol={"true"})
+
+for entity in collection.entities():
+    if not entity.annotated(FAMILY) and not entity.annotated(MI_Words):
+        entity.reject()
+
+    collection.lookup(RegExp("RO", ".*r\s*/\s*o.*"))
+
+    if entity.annotated(MI_Words, diagnoses="MI"):
+        if not entity.annotated(MI_Words, protocol="true")
+                  and not entity.annotated(RO):
+            entity.annotate(MI_Entity, diagnosis="MI")
+
+        if entity.annotated(RO):
+            entity.annotate(MI_Entity_RO)
+
+MI_Related = collection.defineAnnotation("MI_Related", 
+                diagnosis={"MI"}, value={"negated", "uncertain"})
+
+for sentence in collection.sentences():
+
+    if not sentence.annotated(MI_Words):
+        sentence.reject()
+
+    if sentence.annotated(MI_Words, context="affirmative"):
+        sentence.annotate(MI_Related, 
+                  value="diagnosed", diagnosis="MI")
+
+    if sentence.annotated(MI_Words, context="negative"):
+        sentence.annotate(MI_Related, value="negated")
+
+    if sentence.annotated(MI_Entity_RO):
+        sentence.annotate(MI_Related, value="negated")
+
+    if sentence.annotated(MI_Words, context="ambiguous"):
+        if sentence.annotated(MI_Words, _negation_literal="rule_out"):
+            sentence.annotate(MI_Related, value="negated")
+        else:
+            sentence.annotate(MI_Realated, value="uncertain")
+
+    if sentence.annotated(FAMILY):
+        sentence.reject()
+
+IMI = collection.defineAnnotation("IMI", value={"diagnosed",
+                        "ambiguous", "ruled_out", "inconclusive"})
+
+for document in collection.documents():
+
+    if document.annotated(MI_Related, diagnosis="MI")
+                 and document.annotated(MI_Related, 
+                         value="negated", equals=0):
+        document.annotate(IMI, value="diagnosed")
+
+    if document.annotated(MI_Related, value="negated"):
+        if document.annotated(MI_Related, value="diagnosed", equals=0):
+            document.annotate(IMI, value="ruled_out")
+        else:
+            document.annotate(IMI, value="ambiguous")
+    else:
+        if not document.annotated(MI_Related, value="diagnosed") and
+                 document.annotated(MI_Related, value="uncertain"):
+            document.annotate(IMI, value="inconclusive")
+
+collection.setFinalAnnotation(IMI)
+        

@@ -1,0 +1,127 @@
+import NUMERIC
+from seemes import CHF_Words, FAMILY   
+
+## 1
+collection.lookup(CHF_Words, FAMILY, NUMERIC)
+
+CHF_Entity = collection.defineAnnotation("CHF-Entity",
+    diagnosis = {"CHF", "HF"})
+CHF_Entity_EF = collection.defineAnnotation("CHF-Entity-EF",
+    symptom = {"low EF"})
+for entity in collection.entities():
+       if entity.annotated(CHF_Words, condition = "HF"):
+        if entity.annotated(CHF_Words, qualifier = "congestive"):
+            ## 2
+            entity.annotate(CHF_Entity, diagnosis = "CHF")
+        else:
+            ## 3
+            entity.annotate(CHF_Entity, diagnosis = "HF")
+
+       if entity.annotated(CHF_Words, symptom = "EF") and
+            entity.annotated(NUMERIC, less_than = 50):
+        ## 4
+        entity.annotate(CHF_Entity_EF, symptom = "low EF")
+
+       if entity.annotated(CHF_Words) and
+            not entity.annotated(FAMILY) and
+            not entity.annotated(NUMERIC, measure = "%"):
+        ## 5
+        entity.reject()
+
+CHF_Related = collection.defineAnnotation("CHF-Related",
+    value = {"negated", "diagnosed", "symptoms", "uncertain"},
+       diagnosis = {"CHF", "HF"})
+    
+for sentence in collection.sentences():
+       if not sentence.annotated(CHF_Words):
+        ## 6
+        sentence.reject()
+
+       if sentence.annotated(CHF_Entity, context = "affirmative"):
+        if sentence.annotated(CHF_Entity, diagnosis = "CHF"):
+            ## 7
+            sentence.annotate(CHF_Related,
+                value = "diagnosed", diagnosis = "CHF")
+        if sentence.annotated(CHF_Entity, diagnosis = "HF"):
+            ## 8
+            sentence.annotate(CHF_Related,
+                value = "diagnosed", diagnosis = "HF")
+
+       if sentence.annotated(CHF_Entity, context = "negative"):
+        if not sentence.annotated(CHF_Words, procedure = "CXR"):
+            ## 9
+            sentence.annotate(CHF_Related, value = "negated")
+        if sentence.annotated(CHF_Words, condition = "CD"):
+            ## 10
+            sentence.annotate(CHF_Related, value = "negated")
+        if sentence.annotated(CHF_Words, procedure = "CXR"):
+            ## 11
+            sentence.annotate(CHF_Related, value = "uncertain")
+
+       if sentence.annotated(CHF_Entity, context = "ambiguous"):
+        ## 12
+            sentence.annotate(CHF_Related, value = "uncertain")
+
+       if sentence.annotated(CHF_Words, symptom = "EF") and
+            sentence.annotated(NUMERIC, less_than = 50) and
+            sentence.annotated(NUMERIC, measure = "%"):
+        ## 13
+            sentence.annotate(CHF_Related, value = "symptoms")
+
+       if sentence.annotated(CHF_Entity_EF, symptom = "low EF"):
+        ## 14
+            sentence.annotate(CHF_Related, value = "symptoms")
+
+       if sentence.annotated(CHF_Words, symptom = "PED") and
+            sentence.annotated(CHF_Words, symptom = "SHORTNESS") and
+            sentence.annotated(CHF_Words, symptom = "BREATH"):
+        ## 15
+            sentence.annotate(CHF_Related, value = "symptoms")
+
+       if sentence.annotated(FAMILY):
+        ## 16
+            sentence.reject()
+
+       if not sentence.annotated(CHF_Related):
+        ## 17
+            sentence.reject()
+
+ICHF = collection.defineAnnotation("ICHF",
+    value = {"diagnosed", "ruled out", "ambiguous",
+             "inconclusive", "symptoms present"})
+
+for document in collection.documents():
+       if document.annotated(CHF_Related, diagnosis = "CHF") and
+            not document.annotated(CHF_Related, value = "negated"):
+        ## 18
+        document.annotate(ICHF, value = "diagnosed")
+
+       if document.annotated(CHF_Related, diagnosis = "HF") and
+            not document.annotated(CHF_Related, value = "negated"):
+        ## 19
+        document.annotate(ICHF, value = "diagnosed")
+
+       if document.annotated(CHF_Related, value = "negated") and
+            not document.annotated(CHF_Related, value = "diagnosed"):
+        ## 20
+        document.annotate(ICHF, value = "ruled out")
+
+       if document.annotated(CHF_Related, value = "negated") and
+            document.annotated(CHF_Related, value = "diagnosed"):
+        ## 21
+        document.annotate(ICHF, value = "ambiguous")
+
+       if document.annotated(CHF_Related, value = "uncertain") and
+            not document.annotated(CHF_Related, value = "diagnosed") and
+            not document.annotated(CHF_Related, value = "symptoms"):
+        ## 22
+        document.annotate(ICHF, value = "inconclusive")
+
+       if not document.annotated(CHF_Related, value = "diagnosed") and
+            not document.annotated(CHF_Related, value = "negated") and
+            document.annotated(CHF_Related, value = "symptoms"):
+        ## 23
+        document.annotate(ICHF, value = "symptoms present")
+
+collection.setFinalAnnotation(ICHF)
+
