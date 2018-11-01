@@ -2,7 +2,7 @@ import re
 from lxml import etree
 from lxml import objectify
 from mongodb import get,  put
-from main_interpretator import next_step
+from claudia_interpretator import next_step
 
 taxes = [
             'Cardio-Loc', 
@@ -141,13 +141,13 @@ class showCard:
         div2.set('class',  'code')
         div2.set('id',  'code_steps')
         
-        code = get("code.json",  formula="CHF",  mongo=mongo)
+        code = get("code.cla.json",  formula="CHF",  mongo=mongo)
         filtre = re.compile("\s+", re.M + re.I + re.U)
         n=1
-        if new_step > len(code['sourceStatements']):
-            new_step = len(code['sourceStatements'])
+        if new_step > len(code['source']):
+            new_step = len(code['source'])
             step = new_step - 1
-        for line in code['sourceStatements']:
+        for line in code['source']:
             s = filtre.sub(' ',  line['text'])
             s = re.sub('<',  '&lt;',  s)
             s = re.sub('>',  '&gt;',  s)
@@ -185,7 +185,7 @@ class showCard:
             while i <= new_step:
                 next_step(code, dataset,  number_of_card,  i,  mongo)
                 snap = get("snap.json", dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
-                new_chunks = snap
+                new_chunks = snap['documents'][0]
                 steps['steps'].append(new_chunks)
                 i += 1
             put("steps.json",  steps, dataset=dataset, mongo=mongo)
@@ -274,13 +274,13 @@ class showCard:
         div2 = objectify.SubElement(apply_anns ,  'div')
         div2.set('class',  'code')
         
-        code = get("code.json",  formula="CHF",  mongo=mongo)
+        code = get("code.cla.json",  formula="CHF",  mongo=mongo)
         filtre = re.compile("\s+", re.M + re.I + re.U)
         n=1
-        if new_step > len(code['sourceStatements']):
-            new_step = len(code['sourceStatements'])
+        if new_step > len(code['source']):
+            new_step = len(code['source'])
             step = new_step - 1
-        for line in code['sourceStatements']:
+        for line in code['source']:
             s = filtre.sub(' ',  line['text'])
             s = re.sub('<',  '&lt;',  s)
             s = re.sub('>',  '&gt;',  s)

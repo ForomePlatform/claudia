@@ -1,5 +1,5 @@
 import json
-from mongodb import get
+from mongodb import get,  put,  connect
 
 # Split a line into a list of words.
 def split_to_words(line):
@@ -92,6 +92,8 @@ def annotation_values(words):
     words = ''.join(words)
     #print('Annotation values: ' + str(words))
     part = words.split('=')
+    if words == '':
+        return {}
     if len(part) != 2:
         error = {}
         error['action'] = 'error'
@@ -152,11 +154,14 @@ def defineAnnotation(words):
     if 'message' in annotation:
         return annotation
     definition['annotations'].append(annotation)
+    definition['annotations'].append({'key': 'context',  'values': ['ambiguous', 
+                                            'negative',  'affirmative']})
     words = ''.join(words).split(',')[1:]
     return definition
 
 # Logic expression in a condition operator
 def is_condition(words,  vars,  annotations):
+    print('annotations: ' + json.dumps(annotations,  indent=4))
     #print('condition words: ' + str(words))
     if words == []:
         error = {}
@@ -173,10 +178,10 @@ def is_condition(words,  vars,  annotations):
         if (words[m] == 'and' or words[m] == 'or') and brekets == 0:
             exp1 = words[0:m]
             exp2 = words[m+1:]
-            cond1 = is_condition(exp1,  vars)
+            cond1 = is_condition(exp1,  vars,  annotations)
             if cond1['action'] == 'error':
                 return cond1
-            cond2 = is_condition(exp2,  vars)
+            cond2 = is_condition(exp2,  vars,  annotations)
             if cond2['action'] == 'error':
                 return cond2
             operator = {}
@@ -200,10 +205,10 @@ def is_condition(words,  vars,  annotations):
         operator = {}
         operator['action'] = {}
         operator['action']['f'] = 'not'
-        cond = is_condition(words[1:],  vars)
+        cond = is_condition(words[1:],  vars,  annotations)
         if cond['action'] == 'error':
             return cond
-        operator['action']['a'] = [cond['action']]
+        operator['action']['a'] = cond['action']
         operator['args'] = cond['args']
         return operator
     # Check an annotation
@@ -214,10 +219,14 @@ def is_condition(words,  vars,  annotations):
             operator = {}
             operator['action'] = {}
             operator['action']['f'] = 'annotated'
+            operator['action']['a'] = []
             operator['args'] = []
             if words == []:
                 return operator
-            operator['action']['a'] = [words[0]]
+            key_word = {}
+            key_word['type'] = 'key'
+            key_word['value'] = words[0]
+            operator['args'].append(key_word)
             line = ''.join(words)
             words = line.split(',')
             current_ann = {}
@@ -231,6 +240,7 @@ def is_condition(words,  vars,  annotations):
                 return error
             for word in words[1:]:
                 part = word.split('=')
+                print('part: ' + str(part))
                 if len(part) != 2:
                     error = {}
                     error['action'] = 'error'
@@ -241,29 +251,32 @@ def is_condition(words,  vars,  annotations):
                     for field in current_ann['annotations']:
                         if field['key'] == part[0]:
                             curr_key = field
-                    if curr_key == {} and part[0] != 'context':
-                        error = {}
-                        error['action'] = 'error'
-                        error['message'] = 'Undefined key of annotations: ' + str(part[0])
-                        return error
-                    if part[1] not in curr_key['values']:
-                        error = {}
-                        error['action'] = 'error'
-                        error['message'] = 'Undefined value of annotations: ' + str(part[1])
-                        return error
+                    #print('value: ' + part[0] + ', current value: ' + str(curr_key))
+                    if curr_key == {} and part[0] != 'context' and part[0] != 'diagnosis':
+                        if part[0] not in ['equals',  'great_than',  'less_than']:
+                            error = {}
+                            error['action'] = 'error'
+                            error['message'] = 'Undefined key of annotations: ' + str(part[0])
+                            return error
                     value = {}
                     value['type'] = 'const'
                     if part[1][0] == '"' and part[1][-1] == '"':
                         value['value'] = part[1][1:-1]
                     else:
                         value['value'] = int(part[1])
+                    print('value: ' + part[0] + ', current value: ' + str(curr_key))
+                    if  type(value['value']) != int and value['value'] not in curr_key['values']:
+                        error = {}
+                        error['action'] = 'error'
+                        error['message'] = 'Undefined value of the annotation: ' + str(part[1])
+                        return error
                     key = {}
                     key['type'] = 'annotationData'
                     key['value'] = part[0]
                     equals = {}
                     equals['f'] = 'equals'
                     equals['a'] = [{'f':'x'},  {'f':'x'}]
-                    operator['action']['a'] = equals
+                    operator['action']['a'].append(equals)
                     operator['args'].append(key)
                     operator['args'].append(value)
             return operator
@@ -290,6 +303,9 @@ def annotate(ann,  source_id):
     annotation['key'] = ann[0]
     pars = {}
     words = ''.join(ann).split(',')
+    if len(words) == 1:
+        annotation['options'] = pars
+        return annotation
     for word in words[1:]:
         part = word.split('=')
         if len(part) != 2:
@@ -306,8 +322,13 @@ def annotate(ann,  source_id):
     annotation['options'] = pars
     return annotation
 
+def is_str(s):
+    if len(s)>1 and s[0] == '"' and s[-1] == '"':
+        return s[1:-1]
+    return
+
 # Find all phrase such that "collection...."
-def collection(words,  source_id):
+def collection(words,  source_id,  annotations):
     #print('collection: ' + str(words[1:4]))
     if words[1:4] == ['.',  'lookup',  '('] and words[-1] == ')':
         source_id['id'] += 1
@@ -316,6 +337,22 @@ def collection(words,  source_id):
         lookup['options'] = {}
         lookup['source_id'] = source_id['id']
         lookup['name'] = 'lookup'
+        if words[4] == 'RegExp':
+            if len(words) != 11 or words[5] != '(' or words[7] != ',' or words[9:11] != [')',  ')']:
+                error = {}
+                error['action'] = 'error'
+                error['message'] = 'Wrong definition of Regular Expression operator.'
+                return error
+            if is_str(words[6]) is None or is_str(words[8]) is None:
+                error = {}
+                error['action'] = 'error'
+                error['message'] = 'Wrong definition of Regular Expression operator.'
+                return error
+            lookup['options']['name'] = 'RegExp'
+            lookup['options']['var'] = is_str(words[6])
+            lookup['options']['pattern'] = is_str(words[8])
+            annotations.append({'key': is_str(words[6]),  'annotations': []})
+            return lookup
         lookup['options']['name'] = 'lookup'
         ann = words[4:-1]
         sememes = ''.join(ann).split(',')
@@ -338,7 +375,6 @@ def cycle(words,  vars):
     vars.append(words[1])
     loop = {}
     loop['action'] = 'for'
-    loop['variable'] = words[1]
     loop['set'] = words[3:-1]
     if loop['set'][:2] != ['collection',  '.'] or loop['set'][3:] != ['(',  ')']:
         error = {}
@@ -407,13 +443,40 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
             response['source'] = source
             return response
         if words[0] == 'import':
+            s = ''.join(words[1:])
+            anns = s.split(',')
+            for ann in anns:
+                annotation = {}
+                annotation['key'] = ann
+                if ann == 'NUMERIC':
+                    annotation['annotations'] = [{'key':'equals'},  
+                                                    {'key':'great_than'},  {'key': 'less_than'}, 
+                                                    {'key': 'measure',  'values': ['%']}]
+                else:
+                    annotation['annotations'] = []
+                annotations.append(annotation)
             n += 1
-            pass
         elif words[0] == 'from' and words[2] == 'import':
+            s = ''.join(words[3:])
+            anns = s.split(',')
+            for ann in anns:
+                annotation = {}
+                annotation['key'] = ann
+                annotation['annotations'] = [
+                                            {'key':'diagnosis',  'values': ['CHF']}, 
+                                            {'key': 'protocol',  'values': ['true',  'false']}, 
+                                            {'key': 'context',  'values': ['ambiguous', 
+                                            'negative',  'affirmative']}, 
+                                            {'key': '_negation_literal',  'values': 'rule_out'}, 
+                                            {'key': 'condition', 'values': ['HF',  'CD']}, 
+                                            {'key': 'qualifier',  'values': ['congestive']}, 
+                                            {'key': 'symptom',  'values': ['EF',  'low_EF',  'PED', 
+                                            'SHORTNESS',  'BREATH']}, 
+                                            {'key': 'procedure',  'values': ['CXR']}]
+                annotations.append(annotation)
             n += 1
-            pass
         elif words[0] == 'collection':
-            res = collection(words,  source_id)
+            res = collection(words,  source_id,  annotations)
             if res['action'] == 'error':
                 res['line'] = n
                 return res
@@ -433,11 +496,11 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
                 definition['line'] = n
                 return definition
             annotations.append(definition)
-            statements.append(definition)
+            #statements.append(definition)
             n += 1
         elif words[0] == 'for' and words[2] == 'in' and words[-1] == ':':
             loop = cycle(words,  vars)
-            loop['line'] = n
+            #loop['line'] = n
             if loop['action'] == 'error':
                 return loop
             n += 1
@@ -476,7 +539,7 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
             cond = is_condition(condition,  vars,  annotations)
             if cond['action'] == 'error':
                 cond['line'] = n
-                return condition
+                return cond
             operator_if['options']['condition'] = cond['action']
             operator_if['options']['args'] = cond['args']
             
@@ -580,9 +643,11 @@ if __name__ == '__main__':
             print('source-id: ' + str(source['source_id']))
             while source['text'].find('  ') != -1:
                 source['text'] = source['text'].replace('  ',  ' ')
-            if source['source_id'] == 3:
-                print('source 3: \n' + source['text'])
+#            if source['source_id'] == 3:
+#                print('source 3: \n' + source['text'])
         file = open('cci/claudia_rules/' + claudia_file_name + '.cla.json',  'w')
         file.write(json.dumps(code,  indent=4))
         file.close()
+        mongo = connect()
+        put('code.cla.json',  code,  formula=claudia_file_name,  mongo=mongo)
     print('Ok.')

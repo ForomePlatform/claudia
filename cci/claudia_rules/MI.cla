@@ -5,13 +5,15 @@ collection.lookup(MI_Words, FAMILY, NUMERIC)
 
 MI_Entity = collection.defineAnnotation("MI_Entity", diagnosis = {"MI"}, protocol={"true"})
 
+MI_Entity_RO = collection.defineAnnotation("MI_Entity_RO")
+
 for entity in collection.entities():
     if not entity.annotated(FAMILY) and not entity.annotated(MI_Words):
         entity.reject()
 
     collection.lookup(RegExp("RO", ".*r\s*/\s*o.*"))
 
-    if entity.annotated(MI_Words, diagnoses="MI"):
+    if entity.annotated(MI_Words, diagnosis = "MI"):
         if not entity.annotated(MI_Words, protocol="true")
                   and not entity.annotated(RO):
             entity.annotate(MI_Entity, diagnosis="MI")
@@ -20,7 +22,7 @@ for entity in collection.entities():
             entity.annotate(MI_Entity_RO)
 
 MI_Related = collection.defineAnnotation("MI_Related", 
-                diagnosis={"MI"}, value={"negated", "uncertain"})
+                diagnosis={"MI"}, value={"negated", "uncertain", "diagnosed"})
 
 for sentence in collection.sentences():
 

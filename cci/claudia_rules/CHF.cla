@@ -1,39 +1,39 @@
 import NUMERIC
-from seemes import CHF_Words, FAMILY   
+from seemes import CHF-Words, FAMILY   
 
 ## 1
-collection.lookup(CHF_Words, FAMILY, NUMERIC)
+collection.lookup(CHF-Words, FAMILY, NUMERIC)
 
-CHF_Entity = collection.defineAnnotation("CHF-Entity",
+CHF_Entity = collection.defineAnnotation("CHF_Entity",
     diagnosis = {"CHF", "HF"})
-CHF_Entity_EF = collection.defineAnnotation("CHF-Entity-EF",
+CHF_Entity_EF = collection.defineAnnotation("CHF_Entity_EF",
     symptom = {"low EF"})
 for entity in collection.entities():
-       if entity.annotated(CHF_Words, condition = "HF"):
-        if entity.annotated(CHF_Words, qualifier = "congestive"):
+       if entity.annotated(CHF-Words, condition = "HF"):
+        if entity.annotated(CHF-Words, qualifier = "congestive"):
             ## 2
             entity.annotate(CHF_Entity, diagnosis = "CHF")
         else:
             ## 3
             entity.annotate(CHF_Entity, diagnosis = "HF")
 
-       if entity.annotated(CHF_Words, symptom = "EF") and
+       if entity.annotated(CHF-Words, symptom = "EF") and
             entity.annotated(NUMERIC, less_than = 50):
         ## 4
         entity.annotate(CHF_Entity_EF, symptom = "low EF")
 
-       if entity.annotated(CHF_Words) and
+       if entity.annotated(CHF-Words) and
             not entity.annotated(FAMILY) and
             not entity.annotated(NUMERIC, measure = "%"):
         ## 5
         entity.reject()
 
-CHF_Related = collection.defineAnnotation("CHF-Related",
+CHF_Related = collection.defineAnnotation("CHF_Related",
     value = {"negated", "diagnosed", "symptoms", "uncertain"},
        diagnosis = {"CHF", "HF"})
     
 for sentence in collection.sentences():
-       if not sentence.annotated(CHF_Words):
+       if not sentence.annotated(CHF-Words):
         ## 6
         sentence.reject()
 
@@ -48,13 +48,13 @@ for sentence in collection.sentences():
                 value = "diagnosed", diagnosis = "HF")
 
        if sentence.annotated(CHF_Entity, context = "negative"):
-        if not sentence.annotated(CHF_Words, procedure = "CXR"):
+        if not sentence.annotated(CHF-Words, procedure = "CXR"):
             ## 9
             sentence.annotate(CHF_Related, value = "negated")
-        if sentence.annotated(CHF_Words, condition = "CD"):
+        if sentence.annotated(CHF-Words, condition = "CD"):
             ## 10
             sentence.annotate(CHF_Related, value = "negated")
-        if sentence.annotated(CHF_Words, procedure = "CXR"):
+        if sentence.annotated(CHF-Words, procedure = "CXR"):
             ## 11
             sentence.annotate(CHF_Related, value = "uncertain")
 
@@ -62,7 +62,7 @@ for sentence in collection.sentences():
         ## 12
             sentence.annotate(CHF_Related, value = "uncertain")
 
-       if sentence.annotated(CHF_Words, symptom = "EF") and
+       if sentence.annotated(CHF-Words, symptom = "EF") and
             sentence.annotated(NUMERIC, less_than = 50) and
             sentence.annotated(NUMERIC, measure = "%"):
         ## 13
@@ -72,9 +72,9 @@ for sentence in collection.sentences():
         ## 14
             sentence.annotate(CHF_Related, value = "symptoms")
 
-       if sentence.annotated(CHF_Words, symptom = "PED") and
-            sentence.annotated(CHF_Words, symptom = "SHORTNESS") and
-            sentence.annotated(CHF_Words, symptom = "BREATH"):
+       if sentence.annotated(CHF-Words, symptom = "PED") and
+            sentence.annotated(CHF-Words, symptom = "SHORTNESS") and
+            sentence.annotated(CHF-Words, symptom = "BREATH"):
         ## 15
             sentence.annotate(CHF_Related, value = "symptoms")
 

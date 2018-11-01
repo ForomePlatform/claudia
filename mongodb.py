@@ -318,6 +318,10 @@ def get(type, number_of_card="0",  taxonomy ="None",
             dbh = mongo["claudia"]
             form = dbh.formulas.find_one({"formula": formula})
             return form["hsir"]
+        elif type == "code.cla.json":
+            dbh = mongo["claudia"]
+            form = dbh.formulas.find_one({"formula": formula})
+            return json.loads(form["cla_json"])
         elif type == "code.json":
             dbh = mongo["claudia"]
             form = dbh.formulas.find_one({"formula": formula})
@@ -397,6 +401,11 @@ def put(type, file,  number_of_card="0",  taxonomy="None",
         key = 'json'
         dbh = mongo["claudia"]
         q = {"$set":  {key: file}}
+        dbh.formulas.update({'formula': formula},  q,  upsert=True)
+    elif type == "code.cla.json":
+        key = 'cla_json'
+        dbh = mongo["claudia"]
+        q = {"$set":  {key: json.dumps(file)}}
         dbh.formulas.update({'formula': formula},  q,  upsert=True)
     elif type == "calculated_indexes":
         key = 'indexes'

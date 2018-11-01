@@ -19,9 +19,9 @@ def is_word(term,  text):
     return True
 
 #  Apply a taxonomy 'tax' for chunk 'text'. 'Par' is a tiple of parameters.  
-def taxonomy(text,  par):
-    tax = par[0]
-    mongo = par[1]
+def taxonomy(text,  tax,  mongo):
+    #tax = par[0]
+    #mongo = par[1]
     dict = {}
     filtre = re.compile("\s+", re.M + re.I + re.U)
     tax_file = get("tax.tset",  taxonomy=tax,  mongo=mongo).split('\n')
@@ -48,8 +48,8 @@ def taxonomy(text,  par):
     return dict
 
 #  Apply numeric annotator for chunk 'text'. 'Par' is a tiple of parameters.  
-def IsNumericAnnotator(text,  par):
-    mongo=par[0]
+def IsNumericAnnotator(text,  mongo):
+    #mongo=par[0]
     dict = {}
     # In 'text' there is a number  
     result = re.search(r'\d',   text)

@@ -1,5 +1,6 @@
 from viewer import showIndex
 from viewer_cards import showCard
+from redactor import claudiaRedactor
 
 #===============================================
 class ClaudiaService:
@@ -15,9 +16,12 @@ class ClaudiaService:
         if rq_path == "/":
             return serv_h.makeResponse(
                 content = showIndex(rq_args,  mongo).site)
-        if (rq_path == "/card") and ("id" in rq_args):
+        elif (rq_path == "/card") and ("id" in rq_args):
             return serv_h.makeResponse(
                 content = showCard(rq_args,  mongo=mongo).site)
+        elif rq_path == "/redactor":
+            return serv_h.makeResponse(
+                content = claudiaRedactor(rq_args,  mongo=mongo).site)
 
 
         return serv_h.makeResponse(error = 404)
