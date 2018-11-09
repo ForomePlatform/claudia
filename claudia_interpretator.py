@@ -26,6 +26,8 @@ def all_files(dataset,  mongo):
     indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     code = get("code.cla.json", formula=formula, mongo=mongo)
     for number_of_card in indexes:
+        if number_of_card in  ['152',  '222',  '257', '284',  '326',  '344']:
+            continue
         print('Card #' + number_of_card)
         doc_data = create_dict(dataset,  number_of_card,  mongo)
         all_steps(code, doc_data, dataset,  number_of_card,  mongo,  False)
@@ -34,6 +36,7 @@ def all_files(dataset,  mongo):
                 formula = formula,  mongo=mongo)
         if 'ICHF' in doc_data['data']:
             chf.append(number_of_card)
+            print('ICHF')
     put("calculated_indexes",  chf,  formula=formula,  
                 dataset=dataset,  mongo=mongo)
 
@@ -75,38 +78,49 @@ def all_steps(code,  doc_data, dataset,  number_of_card,  mongo,  with_snap):
 #
 #  Attribute 'data' is empty.  
 def create_dict(dataset,  patient,  mongo):
+    #sHTML_Parser = etree.HTMLParser(remove_comments = True)
+    doc = get("doc.html",  dataset=dataset,  
+                                number_of_card=patient,  mongo=mongo)
+    return create_dict_by_doc(doc)
+
+# Generate the dictionary by raw HTML-document. "doc" is a list of sentences.
+def create_dict_by_doc(nodes):
     doc_data = {}
     doc_data['data'] = {}
     doc_data['documents'] = []
     doc = {}
     doc['data'] = {}
     doc['sentences'] = []
-    #sHTML_Parser = etree.HTMLParser(remove_comments = True)
-    samples = get("doc.html",  dataset=dataset,  
-                                number_of_card=patient,  mongo=mongo)
-    for node in samples:
-        sample = etree.fromstring(node)
-        sentence = {}
-        sentence['data'] = {}
-        sentence['chunks'] = []
-        s = etree.tostring(sample)
-        ss = etree.fromstring(s)
-        for nd_alevel in ss.xpath('/p/span/span'):
-            alevel = nd_alevel.attrib
-            s = etree.tostring(nd_alevel)
-            sss = etree.fromstring(s)
-            for nd in sss.xpath('/span/span/span'):
-                chunk = {}
-                chunk['text'] = nd.text
-                chunk['data'] = {}
-                chunk['data']['__negation'] = alevel['class'][6:]
-                sentence['chunks'].append(chunk)
-        doc['sentences'].append(sentence)
+    for node in nodes:
+        try:
+            sample = etree.fromstring(node)
+            sentence = {}
+            sentence['data'] = {}
+            sentence['chunks'] = []
+            s = etree.tostring(sample)
+            ss = etree.fromstring(s)
+            for nd_alevel in ss.xpath('/p/span/span'):
+                alevel = nd_alevel.attrib
+                s = etree.tostring(nd_alevel)
+                sss = etree.fromstring(s)
+                for nd in sss.xpath('/span/span/span'):
+                    chunk = {}
+                    chunk['text'] = nd.text
+                    chunk['data'] = {}
+                    chunk['data']['__negation'] = alevel['class'][6:]
+                    sentence['chunks'].append(chunk)
+            doc['sentences'].append(sentence)
+        except etree.XMLSyntaxError:
+            print('XMLSyntaxError: ' + node)
+            return 'XMLSyntaxError'
     doc_data['documents'].append(doc)
     return doc_data
 
 def apply_tax(chunk,  step,  mongo,  step_id):
     if step_id != step['source_id'] and step_id != -1:
+        return
+    if step['options']['name'] == 'RegExp':
+        #RegExpAnnotator(chunk['text'], chunk['data'])
         return
     for tax in step['options']['values']:
         if tax == 'NUMERIC':
@@ -190,13 +204,13 @@ def condition(data,  cond,  args):
 
 def annotated(data,  cond,  args):
     #print('data: ' + str(data))
-    n_ann = len(cond['a']) + 1
-    filds = args[1:n_ann]
+    #print('cond: ' + str(cond))
+    #print('args: ' + str(args))
     if 'documents' in data:
         set = 'documents'
     elif 'sentences' in data:
         set = 'sentences'
-    elif 'chunks':
+    elif 'chunks'in data:
         set = 'chunks'
     else:
         set = 'text'
@@ -215,8 +229,33 @@ def annotated(data,  cond,  args):
             print('Unknown type: ' + arg['type'])
             sys.exit(8)
     else:
-        for chunk in cond['set']:
-            pass
+        #print('chunk cond: ' + str(cond))
+        for chunk in data[set]:
+            new_args = copy.deepcopy(args)
+            new_cond = copy.deepcopy(cond)
+            if annotated(chunk,  new_cond,  new_args):
+                for ann in new_cond['a']:
+                    args.pop(0)
+                return True
+        return False
+#        sys.exit()
+#        n = 0
+#        for chunk in data[set]:
+#            new_args = copy.deepcopy(args)
+#            arg = new_args[0]
+#            new_args.pop(0)
+#            if arg['type'] == 'key':
+#                if arg['value'] in data['data']:
+#                    res = True
+#                else:
+#                    res = False
+#                for ann in cond['a']:
+#                    if new_args[0] == 'count':
+#                    res = condition(data,  ann,  args) and res
+#                return res
+#            else:
+#                print('Unknown type: ' + arg['type'])
+#                sys.exit(8)
 
 
 #  'And'
@@ -240,6 +279,12 @@ def negative(data,  cond,  args):
 
 #  '='
 def equals(data,  cond,  args):
+    if args[0]['value'] == 'context':
+        context = args[1]['value']
+        args.pop(0)
+        args.pop(0)
+        #print('chunk: ' + data['text'] + ', negation: ' + str(data['data']['__negation']))
+        return data['data']['__negation'] >= negation[context]['min'] and data['data']['__negation'] <= negation[context]['max']
     a = condition(data,  cond[0],  args)
     b = condition(data,  cond[1],  args)
     if a is None or b is None:
@@ -289,13 +334,18 @@ def snapshot(dataset,  number_of_card,  doc_data,  mongo):
                                 number_of_card=number_of_card,  mongo=mongo)
 
 
-def setFinalAnnotation(doc_data):
-    pass
+def setFinalAnnotation(doc_data,  step):
+    key = step['key']
+    if key in doc_data['data']:
+        doc_data['data']['Formula diagnose'] = key + '-diagnosed'
+    else:
+        doc_data['data']['Formula diagnose'] = 'No'
 
 
 #  The interpretator of step 'step' of JSON-code appying for a document ('doc-data').  
 #  Snapshots are in 'snap-file'.  
-def claudia_interpretator(doc_data, dataset, number_of_card,  step,  mongo, with_snap,  step_id):
+def claudia_interpretator(doc_data, dataset, 
+                    number_of_card,  step,  mongo, with_snap,  step_id):
     if step['action'] == 'for':
         loop(doc_data, dataset,  number_of_card,  
                                         step,  mongo, with_snap,  step_id)
@@ -303,7 +353,7 @@ def claudia_interpretator(doc_data, dataset, number_of_card,  step,  mongo, with
         if step['name'] == 'lookup':
             all_chunks(apply_tax,  doc_data,  step,  mongo,  step_id)
         elif step['name'] == 'setFinalAnnotations':
-            setFinalAnnotation(doc_data)
+            setFinalAnnotation(doc_data,  step['options'])
         else:
             print('Unknown operator: ' + step['name'])
             sys.exit(3)
@@ -332,6 +382,39 @@ def next_step(code, dataset, number_of_card,  step_id,  mongo):
                                                     number_of_card,  step,  mongo,  True,  step_id)
 #            break
     snapshot(dataset,  number_of_card,  doc_data,  mongo)
+
+
+def for_one_doc(doc,  code,  mongo):
+    doc_data = create_dict_by_doc(doc)
+    for step in code['statements']:
+        claudia_interpretator(doc_data, None, 
+                            None,  step,  mongo,  False,  -1)
+    #print("Results of the formula: " + json.dumps(doc_data,  indent=4))
+    return doc_data['data']['Formula diagnose']
+    
+
+negation = {
+            "positive": {
+                    "max": 0, 
+                    "min": 0
+            }, 
+            "possibly negative": {
+                    "max": 100, 
+                    "min": 10
+            }, 
+            "negative": {
+                    "max": 100, 
+                    "min": 50
+            }, 
+            "ambiguous": {
+                    "max": 40, 
+                    "min": 10
+            }, 
+            "affirmative": {
+                    "max": 0, 
+                    "min": 0
+            }
+}
 
 
 if __name__ == '__main__':

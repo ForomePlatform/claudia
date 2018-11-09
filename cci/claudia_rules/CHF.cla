@@ -22,7 +22,7 @@ for entity in collection.entities():
         ## 4
         entity.annotate(CHF_Entity_EF, symptom = "low EF")
 
-       if entity.annotated(CHF-Words) and
+       if not entity.annotated(CHF-Words) and
             not entity.annotated(FAMILY) and
             not entity.annotated(NUMERIC, measure = "%"):
         ## 5

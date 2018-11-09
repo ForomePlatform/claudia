@@ -1,20 +1,20 @@
 import NUMERIC, RegExp
-from sememes import MI_Words, FAMILY
+from sememes import MI-Words, FAMILY
 
-collection.lookup(MI_Words, FAMILY, NUMERIC)
+collection.lookup(MI-Words, FAMILY, NUMERIC)
 
 MI_Entity = collection.defineAnnotation("MI_Entity", diagnosis = {"MI"}, protocol={"true"})
 
 MI_Entity_RO = collection.defineAnnotation("MI_Entity_RO")
 
+collection.lookup(RegExp("RO", ".*r\s*/\s*o.*"))
+
 for entity in collection.entities():
-    if not entity.annotated(FAMILY) and not entity.annotated(MI_Words):
+    if not entity.annotated(FAMILY) and not entity.annotated(MI-Words):
         entity.reject()
 
-    collection.lookup(RegExp("RO", ".*r\s*/\s*o.*"))
-
-    if entity.annotated(MI_Words, diagnosis = "MI"):
-        if not entity.annotated(MI_Words, protocol="true")
+    if entity.annotated(MI-Words, diagnosis = "MI"):
+        if not entity.annotated(MI-Words, protocol="true")
                   and not entity.annotated(RO):
             entity.annotate(MI_Entity, diagnosis="MI")
 
@@ -26,21 +26,21 @@ MI_Related = collection.defineAnnotation("MI_Related",
 
 for sentence in collection.sentences():
 
-    if not sentence.annotated(MI_Words):
+    if not sentence.annotated(MI-Words):
         sentence.reject()
 
-    if sentence.annotated(MI_Words, context="affirmative"):
+    if sentence.annotated(MI-Words, context="affirmative"):
         sentence.annotate(MI_Related, 
                   value="diagnosed", diagnosis="MI")
 
-    if sentence.annotated(MI_Words, context="negative"):
+    if sentence.annotated(MI-Words, context="negative"):
         sentence.annotate(MI_Related, value="negated")
 
     if sentence.annotated(MI_Entity_RO):
         sentence.annotate(MI_Related, value="negated")
 
-    if sentence.annotated(MI_Words, context="ambiguous"):
-        if sentence.annotated(MI_Words, _negation_literal="rule_out"):
+    if sentence.annotated(MI-Words, context="ambiguous"):
+        if sentence.annotated(MI-Words, _negation_literal="rule_out"):
             sentence.annotate(MI_Related, value="negated")
         else:
             sentence.annotate(MI_Realated, value="uncertain")
@@ -63,9 +63,9 @@ for document in collection.documents():
             document.annotate(IMI, value="ruled_out")
         else:
             document.annotate(IMI, value="ambiguous")
-    else:
-        if not document.annotated(MI_Related, value="diagnosed") and
-                 document.annotated(MI_Related, value="uncertain"):
+    ##else:
+        if not document.annotated(MI_Related, value="diagnosed")
+                 and document.annotated(MI_Related, value="uncertain"):
             document.annotate(IMI, value="inconclusive")
 
 collection.setFinalAnnotation(IMI)

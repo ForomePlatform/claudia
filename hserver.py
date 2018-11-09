@@ -40,7 +40,7 @@ class HServResponse:
             if without_decoding:
                 response_body = bytes(content)
             else:
-                response_body = content.encode("utf-8")
+                response_body = content#.encode("utf-8")
             response_headers = [("Content-Type", self.sContentTypes[mode]),
                                 ("Content-Length", str(len(response_body)))]
         else:
@@ -79,28 +79,73 @@ class HServHandler:
         if not path:
             path = "/"
         #print('path = "' + path + '"')
-        query_string = environ["QUERY_STRING"]
-       # print('query="' + query_string + '"')
-
-        query_args = dict()
-        if query_string:
-            for a, v in parse_qs(query_string).items():
-                query_args[a] = v[0]
+        
 
         if environ["REQUEST_METHOD"] == "POST":
             try:
                 rq_body_size = int(environ.get('CONTENT_LENGTH', 0))
                 rq_body = environ['wsgi.input'].read(rq_body_size)
-                for a, v in parse_qs(rq_body).items():
-                    query_args[a] = v[0].decode("utf-8")
+                #print('body: ' + rq_body)
+                query_args = self.parse_POST(rq_body)
+                
+#                data_place = rq_body.find('\n\r\n') + 3
+#                if data_place != -1:
+#                    data = rq_body[data_place:]
+#                else:
+#                    data = ""
+#                for a, v in parse_qs(rq_body).items():
+#                    query_args[a] = v[0]#.decode("utf-8")
+#                query_args['post_data'] = data
             except Exception:
                 rep = StringIO()
                 traceback.print_exc(file = rep)
                 log_record = rep.getvalue()
                 logging.error(
                     "Exception on read request body:\n " + log_record)
+        else:
+            query_string = environ["QUERY_STRING"]
+            query_args_pairs = dict()
+            if query_string:
+                for a, v in parse_qs(query_string).items():
+                    query_args_pairs[a] = v[0]
+            query_args = {}
+            query_args['method'] = 'GET'
+            query_args['data'] = query_args_pairs
 
         return path, query_args
+
+    def parse_POST(self,  rq_body):
+        lines = rq_body.split('\n')
+        requests = []
+        flag = True
+        key = "Content-Disposition: form-data; "
+        args = {}
+        data = ''
+        for line in lines:
+            if line.find('----------------') != -1:
+                if args != {}:
+                    args['data'] = data.strip('\n\r')
+                    requests.append(args)
+                flag = True
+                args = {}
+                data = ''
+            else:
+                if line == '\r':
+                    flag = False
+                if flag:
+                    if line[:len(key)] == key:
+                        lin = line[len(key):]
+                        parts = lin.split('; ')
+                        for part in parts:
+                            words = part.split('=')
+                            args[words[0]] = words[1]
+                else:
+                    data += line + '\n'
+        res = {}
+        res['method'] = 'POST'
+        res['data'] = requests
+        return res
+    
 
     #===============================================
     def fileResponse(self, resp_h, fname,  without_decoding):

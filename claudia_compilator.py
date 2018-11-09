@@ -1,3 +1,4 @@
+import sys
 import json
 from mongodb import get,  put,  connect
 
@@ -161,7 +162,7 @@ def defineAnnotation(words):
 
 # Logic expression in a condition operator
 def is_condition(words,  vars,  annotations):
-    print('annotations: ' + json.dumps(annotations,  indent=4))
+    #print('annotations: ' + json.dumps(annotations,  indent=4))
     #print('condition words: ' + str(words))
     if words == []:
         error = {}
@@ -240,7 +241,7 @@ def is_condition(words,  vars,  annotations):
                 return error
             for word in words[1:]:
                 part = word.split('=')
-                print('part: ' + str(part))
+                #print('part: ' + str(part))
                 if len(part) != 2:
                     error = {}
                     error['action'] = 'error'
@@ -264,12 +265,12 @@ def is_condition(words,  vars,  annotations):
                         value['value'] = part[1][1:-1]
                     else:
                         value['value'] = int(part[1])
-                    print('value: ' + part[0] + ', current value: ' + str(curr_key))
-                    if  type(value['value']) != int and value['value'] not in curr_key['values']:
-                        error = {}
-                        error['action'] = 'error'
-                        error['message'] = 'Undefined value of the annotation: ' + str(part[1])
-                        return error
+                    #print('value: ' + part[0] + ', current value: ' + str(curr_key))
+#                    if  type(value['value']) != int and value['value'] not in curr_key['values']:
+#                        error = {}
+#                        error['action'] = 'error'
+#                        error['message'] = 'Undefined value of the annotation: ' + str(part[1])
+#                        return error
                     key = {}
                     key['type'] = 'annotationData'
                     key['value'] = part[0]
@@ -358,12 +359,14 @@ def collection(words,  source_id,  annotations):
         sememes = ''.join(ann).split(',')
         lookup['options']['values'] = sememes
         return lookup
-    elif words[1:3] == ['.',  'setFinalAnnotation']:
+    elif words[1:4] == ['.',  'setFinalAnnotation',  '('] and words[-1] == ')':
         action = {}
         action['action'] = 'detect'
         action['name'] = 'setFinalAnnotations'
         source_id['id'] += 1
         action['source_id'] = source_id['id']
+        action['options'] = {}
+        action['options']['key'] = words[4]
         return action
     else:
         error = {}
@@ -623,15 +626,14 @@ negation = {
             }
 }
 
-if __name__ == '__main__':
-    claudia_file_name = 'CHF'
-    claudia = get('code.cla', formula=claudia_file_name,  from_file=True)
-    #lines = claudia.split('\n')
+def start_compilator(claudia,  claudia_file_name):
     lines = line_constructor(claudia)
     lines = delete_comments(lines)
     ret = compilator(lines,  [],  {'id': 0},  '',  [])
     if ret['action'] == 'error':
-        print('Line ' + str(ret['line']) + ': ' + ret['message'])
+        message = 'Line ' + str(ret['line']) + ': ' + ret['message']
+        print(message)
+        sys.exit()
     else:
         code = {}
         code['rulename'] = claudia_file_name
@@ -643,11 +645,15 @@ if __name__ == '__main__':
             print('source-id: ' + str(source['source_id']))
             while source['text'].find('  ') != -1:
                 source['text'] = source['text'].replace('  ',  ' ')
-#            if source['source_id'] == 3:
-#                print('source 3: \n' + source['text'])
-        file = open('cci/claudia_rules/' + claudia_file_name + '.cla.json',  'w')
-        file.write(json.dumps(code,  indent=4))
-        file.close()
-        mongo = connect()
-        put('code.cla.json',  code,  formula=claudia_file_name,  mongo=mongo)
+        return code
+
+if __name__ == '__main__':
+    claudia_file_name = 'CHF'
+    claudia = get('code.cla', formula=claudia_file_name,  from_file=True)
+    code = start_compilator(claudia,  claudia_file_name)
+    file = open('cci/claudia_rules/' + claudia_file_name + '.cla.json',  'w')
+    file.write(json.dumps(code,  indent=4))
+    file.close()
+    mongo = connect()
+    put('code.cla.json',  code,  formula=claudia_file_name,  mongo=mongo)
     print('Ok.')

@@ -4,9 +4,6 @@ from lxml import etree
 
 # This class finds all informaition about a card  
 class CardHandler:
-#    dict = {}
-#    nodes = []
-#    key_words = ''
     def __init__(self, dataset, number_of_card):
         # Load JSON-file  
         if dataset == 'cci':
