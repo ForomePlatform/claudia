@@ -66,11 +66,6 @@ class runClaudia():
 
     def generator_of_chunks(self,  text):
 #        q = "java -jar /data/projects/Claudia/lib/hsconnector.jar < "
-#        file = "/data/bgm/versions/v.0.1.x/anfisa/README.md"
-#        p = subprocess.Popen(q + file, stdout=subprocess.PIPE, shell=True)
-#        print('generator of chunks: ' + p)
-#        return p
-
         if text[:5] == 'Doc #':
             number_of_card = text[5:]
             try:
@@ -81,9 +76,16 @@ class runClaudia():
                 print("File not found: " + 'cci/documents/Doc' + number_of_card + '.html')
                 return 'File not found: cci/documents/Doc' + number_of_card + '.html'
         else:
-            doc = text
+            #file = "/data/bgm/versions/v.0.1.x/anfisa/README.md"
+            file = open('/data/home/andrey/work/Claudia/claudia/tmp/text.txt',  'w')
+            file.write(text)
+            file.close()
+            q = "java -jar /data/projects/Claudia/lib/hsconnector.jar < "
+            p = subprocess.Popen(q + file, stdout=subprocess.PIPE, shell=True)
+            print('generator of chunks: ' + p)
+            doc = p
         
-        tmp_file = 'tmp/formula.cla'
+        tmp_file = '/data/home/andrey/work/Claudia/claudia/tmp/formula.cla'
         file = open(tmp_file,  'w')
         file.write(doc)
         file.close()
