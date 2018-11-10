@@ -72,6 +72,9 @@ class HServHandler:
 
     #===============================================
     def parseRequest(self, environ):
+        #print('environ:')
+        #for key in environ:
+            #print(key + ': ' + str(environ[key]))
         path = environ["PATH_INFO"]
         #print('before = "' + path + '"')
         if self.mHtmlBase and path.startswith(self.mHtmlBase):
@@ -86,16 +89,15 @@ class HServHandler:
                 rq_body_size = int(environ.get('CONTENT_LENGTH', 0))
                 rq_body = environ['wsgi.input'].read(rq_body_size)
                 #print('body: ' + rq_body)
-                query_args = self.parse_POST(rq_body)
-                
-#                data_place = rq_body.find('\n\r\n') + 3
-#                if data_place != -1:
-#                    data = rq_body[data_place:]
-#                else:
-#                    data = ""
-#                for a, v in parse_qs(rq_body).items():
-#                    query_args[a] = v[0]#.decode("utf-8")
-#                query_args['post_data'] = data
+                if environ['CONTENT_TYPE'][:19] == 'multipart/form-data':
+                    query_args = self.parse_POST(rq_body)
+                else:
+                    query_args_pairs = {}
+                    for a, v in parse_qs(rq_body).items():
+                        query_args_pairs[a] = v[0]#.decode("utf-8")
+                        query_args = {}
+                    query_args['method'] = 'POST'
+                    query_args['data'] = query_args_pairs
             except Exception:
                 rep = StringIO()
                 traceback.print_exc(file = rep)

@@ -22,44 +22,42 @@ def all_datasets(mongo):
 #  It's independent with 'def all_steps'.
 def all_files(dataset,  mongo):
     chf = []
-    formula = 'CHF'
+    formula = 'MI'
     indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     code = get("code.cla.json", formula=formula, mongo=mongo)
     for number_of_card in indexes:
-        if number_of_card in  ['152',  '222',  '257', '284',  '326',  '344']:
-            continue
+#        if number_of_card in  ['152',  '222',  '257', '284',  '326',  '344']:
+#            continue
         print('Card #' + number_of_card)
         doc_data = create_dict(dataset,  number_of_card,  mongo)
         all_steps(code, doc_data, dataset,  number_of_card,  mongo,  False)
         put("annotations",  doc_data['data'],  
                 dataset=dataset,  number_of_card=number_of_card, 
                 formula = formula,  mongo=mongo)
-        if 'ICHF' in doc_data['data']:
+        if doc_data['data']['Formula diagnose'] != 'No':
             chf.append(number_of_card)
-            print('ICHF')
+            print(doc_data['data']['Formula diagnose'])
     put("calculated_indexes",  chf,  formula=formula,  
                 dataset=dataset,  mongo=mongo)
 
 # Apply function 'annotator' for all document of a patient
-def all_documents(annotator,  doc_data,  old_step,  mongo,  step_id):
-    for document in doc_data['documents']:
-        step = copy.deepcopy(old_step)
-        annotator(document,  step,  mongo,  step_id)
+#def all_documents(annotator,  doc_data,  old_step,  mongo,  step_id):
+#    for document in doc_data['documents']:
+#        step = copy.deepcopy(old_step)
+#        annotator(document,  step,  mongo,  step_id)
 
 #  Apply function 'annotator' for all sentence of a document.  
 def all_sentences(annotator,  doc_data,  old_step,  mongo,  step_id):
-    for document in doc_data['documents']:
-        for sentence in document['sentences']:
-            step = copy.deepcopy(old_step)
-            annotator(sentence,  step,  mongo,  step_id)
+    for sentence in doc_data['sentences']:
+        step = copy.deepcopy(old_step)
+        annotator(sentence,  step,  mongo,  step_id)
 
 #  Apply function 'annotator' for all chunks of a document. 
 def all_chunks(annotator, doc_data, old_step,  mongo,  step_id):
-    for document in doc_data['documents']:
-        for sentence  in document['sentences']:
-            for chunk in sentence['chunks']:
-                step = copy.deepcopy(old_step)
-                annotator(chunk,  step,  mongo,  step_id)
+    for sentence  in doc_data['sentences']:
+        for chunk in sentence['chunks']:
+            step = copy.deepcopy(old_step)
+            annotator(chunk,  step,  mongo,  step_id)
 
 
 #  Apply 'interpretator' for all steps of JSON-code in 'json_file_name' for a document.
@@ -87,10 +85,7 @@ def create_dict(dataset,  patient,  mongo):
 def create_dict_by_doc(nodes):
     doc_data = {}
     doc_data['data'] = {}
-    doc_data['documents'] = []
-    doc = {}
-    doc['data'] = {}
-    doc['sentences'] = []
+    doc_data['sentences'] = []
     for node in nodes:
         try:
             sample = etree.fromstring(node)
@@ -109,18 +104,20 @@ def create_dict_by_doc(nodes):
                     chunk['data'] = {}
                     chunk['data']['__negation'] = alevel['class'][6:]
                     sentence['chunks'].append(chunk)
-            doc['sentences'].append(sentence)
+            doc_data['sentences'].append(sentence)
         except etree.XMLSyntaxError:
             print('XMLSyntaxError: ' + node)
             return 'XMLSyntaxError'
-    doc_data['documents'].append(doc)
     return doc_data
 
 def apply_tax(chunk,  step,  mongo,  step_id):
     if step_id != step['source_id'] and step_id != -1:
         return
     if step['options']['name'] == 'RegExp':
-        #RegExpAnnotator(chunk['text'], chunk['data'])
+        new_dict = RegExpAnnotator(chunk['text'], step['options']['pattern'])
+        key = step['options']['var']
+        new_dict[key] = key
+        chunk['data'].update(new_dict)
         return
     for tax in step['options']['values']:
         if tax == 'NUMERIC':
@@ -136,7 +133,8 @@ def loop(doc_data, dataset, number_of_card,  step,  mongo,  with_snap,  step_id)
         elif step['set'] == 'sentences':
             all_sentences(one_step,  doc_data,  new_step,  mongo,  step_id)
         elif step['set'] == 'documents':
-            all_documents(one_step, doc_data,  new_step,  mongo,  step_id)
+            dstep = copy.deepcopy(new_step)
+            one_step(doc_data,  dstep,  mongo,  step_id)
         else:
             print('Unknoun loop set: ' + str(step['set']))
             sys.exit(0)
@@ -206,9 +204,7 @@ def annotated(data,  cond,  args):
     #print('data: ' + str(data))
     #print('cond: ' + str(cond))
     #print('args: ' + str(args))
-    if 'documents' in data:
-        set = 'documents'
-    elif 'sentences' in data:
+    if 'sentences' in data:
         set = 'sentences'
     elif 'chunks'in data:
         set = 'chunks'
@@ -233,10 +229,37 @@ def annotated(data,  cond,  args):
         for chunk in data[set]:
             new_args = copy.deepcopy(args)
             new_cond = copy.deepcopy(cond)
-            if annotated(chunk,  new_cond,  new_args):
+            #print('args before: ' + str(new_args))
+            arg = new_args[0]
+            new_args.pop(0)
+            if arg['type'] == 'key':
+                if arg['value'] in chunk['data']:
+                    res = True
+                else:
+                    res = False
                 for ann in new_cond['a']:
+                    #print('ann: ' + json.dumps(ann,  indent=4))
+                    #print('new_args: ' + json.dumps(new_args,  indent=4))
+                    res = condition(chunk,  ann,  new_args) and res
+                if res:
                     args.pop(0)
-                return True
+                    for ann in new_cond['a']:
+                        args.pop(0)
+                        args.pop(0)
+                    return True
+            else:
+                print('Unknown type: ' + arg['type'])
+                sys.exit(11)
+#            if annotated(chunk,  new_cond,  new_args):
+#                args.pop(0)
+#                for ann in new_cond['a']:
+#                    args.pop(0)
+#                    args.pop(0)
+#                return True
+        args.pop(0)
+        for ann in cond['a']:
+            args.pop(0)
+            args.pop(0)
         return False
 #        sys.exit()
 #        n = 0
@@ -284,7 +307,9 @@ def equals(data,  cond,  args):
         args.pop(0)
         args.pop(0)
         #print('chunk: ' + data['text'] + ', negation: ' + str(data['data']['__negation']))
-        return data['data']['__negation'] >= negation[context]['min'] and data['data']['__negation'] <= negation[context]['max']
+        neg = int(data['data']['__negation'])
+        res = (neg >= negation[context]['min'] and neg <= negation[context]['max'])
+        return res
     a = condition(data,  cond[0],  args)
     b = condition(data,  cond[1],  args)
     if a is None or b is None:
@@ -307,8 +332,9 @@ def variable(data,  args):
         res = arg['value']
         return res
     else:
-        print('Unknown type: ' + args[0]['type'])
-        print(args[0])
+        print('Unknown type: ' + arg['type'])
+        print(args)
+        #print(data)
         sys.exit(9)
 
 
@@ -390,7 +416,7 @@ def for_one_doc(doc,  code,  mongo):
         claudia_interpretator(doc_data, None, 
                             None,  step,  mongo,  False,  -1)
     #print("Results of the formula: " + json.dumps(doc_data,  indent=4))
-    return doc_data['data']['Formula diagnose']
+    return doc_data
     
 
 negation = {

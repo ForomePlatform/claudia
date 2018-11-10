@@ -184,8 +184,7 @@ class showCard:
             i = len(steps['steps'])
             while i <= new_step:
                 next_step(code, dataset,  number_of_card,  i,  mongo)
-                snap = get("snap.json", dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
-                new_chunks = snap['documents'][0]
+                new_chunks = get("snap.json", dataset=dataset,  number_of_card=number_of_card,  mongo=mongo)
                 steps['steps'].append(new_chunks)
                 i += 1
             put("steps.json",  steps, dataset=dataset, mongo=mongo)

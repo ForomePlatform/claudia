@@ -87,8 +87,10 @@ def IsNumericAnnotator(text,  mongo):
 
 #  Apply regular expression 'pattern' for 'text'.  
 def RegExpAnnotator(text,  pattern):
+    #print('pattern: ' + str(pattern))
+    #print('text: ' + str(text))
     dict = {}
     result = re.search(pattern,  text)
     if result is not None:
         dict['pattern'] = pattern
-        return dict
+    return dict

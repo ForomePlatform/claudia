@@ -427,11 +427,11 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
     source = []
     if len(lines) == 0:
         return
-    level = get_level(lines[0])
+    level = -1
     statements = []
     vars = old_vars
     while n < len(lines):
-        print('line ' + str(n) + ': ' + lines[n])
+        #print('line ' + str(n) + ': ' + lines[n])
         words = split_to_words(lines[n])
         while '' in words:
             words.remove('')
@@ -439,6 +439,8 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
         if words == []:
             n += 1
             continue
+        if level == -1:
+            level = get_level(lines[n])
         if get_level(lines[n]) < level:
             response = {}
             response['action'] = statements
@@ -642,13 +644,13 @@ def start_compilator(claudia,  claudia_file_name):
         code['statements'] = ret['action']
         code['source'] = ret['source']
         for source in code['source']:
-            print('source-id: ' + str(source['source_id']))
+            #print('source-id: ' + str(source['source_id']))
             while source['text'].find('  ') != -1:
                 source['text'] = source['text'].replace('  ',  ' ')
         return code
 
 if __name__ == '__main__':
-    claudia_file_name = 'CHF'
+    claudia_file_name = 'MI'
     claudia = get('code.cla', formula=claudia_file_name,  from_file=True)
     code = start_compilator(claudia,  claudia_file_name)
     file = open('cci/claudia_rules/' + claudia_file_name + '.cla.json',  'w')

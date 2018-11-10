@@ -289,7 +289,10 @@ def get(type, number_of_card="0",  taxonomy ="None",
         if type == "doc.html":
             dbh = mongo[dataset]
             doc = dbh.initial_docs.find_one({"id": number_of_card})
-            return doc['html']
+            if doc is not None:
+                return doc['html']
+            else:
+                return
         elif type == "doc.json":
             dbh = mongo[dataset]
             doc = dbh.calculated_docs.find_one({"id": number_of_card})
