@@ -22,7 +22,7 @@ def all_datasets(mongo):
 #  It's independent with 'def all_steps'.
 def all_files(dataset,  mongo):
     chf = []
-    formula = 'MI'
+    formula = 'CHF'
     indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     code = get("code.cla.json", formula=formula, mongo=mongo)
     for number_of_card in indexes:

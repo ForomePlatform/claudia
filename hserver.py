@@ -15,7 +15,8 @@ class HServResponse:
         "css":    "text/css",
         "js":     "application/javascript",
         "png":    "image/png",
-        "json":   "application/json"}
+        "json":   "application/json", 
+        "ico":   "image/ico"}
 
     sErrorCodes = {
         202: "202 Accepted",

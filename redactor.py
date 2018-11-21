@@ -1,5 +1,6 @@
-import json
+#import json
 import urllib
+import socket
 import subprocess
 from lxml import etree
 from mongodb import get
@@ -11,30 +12,23 @@ from claudia_compilator import start_compilator
 class claudiaRedactor:
     def __init__(self,  args,  mongo=None):
         #print('args: ' + json.dumps(args,  indent=4))
+        computer = socket.gethostname()
         
         document = ""
         formula = "<p>Upload a formula from a file.</p>"
         formula_text = urllib.quote(formula)
         for arg in args['data']:
-            #print('arg: ' + json.dumps(arg,  indent=4))
             data = arg['data']
             if arg['name'] == '"formula"':
-#                html = ""
-#                for line in data.split('\n'):
-#                    html += '<p>' + line + '</p>'
-#                formula = html
                 formula_text = urllib.quote(data)
             elif arg['name'] == '"formula_reserve"\r':
                 formula_text = data
             elif arg['name'] == '"document_text"\r': 
-                #print('doc_data: ' + arg['data'])
                 document = data
-                #document= "<textarea id='document_area'  onblur='doc_change();' value='sdf'></textarea>"
             elif arg['name'] == '"document"':
                 document = urllib.quote(data)
             else:
                 print('Unknown name: ' + arg['name'])
-            #print('html: ' + document)
         
         # debugger
         s = "Formula: No errors."
@@ -44,12 +38,16 @@ class claudiaRedactor:
         s = "Here results of the formula will be..."
         results = '<div id="f_results">' + s + '</div>'
         
-        template_file = open('cci/viewer/redactor.html',  'r')
+        if computer == 'noX540LJ':
+            template_name = 'cci/viewer/redactor.html'
+        else:
+            template_name = '''/home/andrey/work/
+Claudia/claudia/cci/viewer/redactor.html'''
+        template_file = open(template_name,  'r')
         template = template_file.read()
         template_file.close()
         template = template.replace('<document_results/>',  results)
         template = template.replace('<debugger/>',  bugs)
-#        template = template.replace('<formula/>',  formula)
         template = template.replace('<document/>',  document)
         template = template.replace('<formula_text/>',  formula_text)
         self.site = template
@@ -103,6 +101,10 @@ class runClaudia():
 
 
     def split_to_chunks(self,  text):
+        computer = socket.gethostname()
+        if computer == 'noX540LJ':
+            return text
+        else:
             file_name = '/home/andrey/work/Claudia/claudia/tmp/text.txt'
             file = open(file_name,  'w')
             file.write(text)
