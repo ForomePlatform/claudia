@@ -65,11 +65,21 @@ class HServHandler:
         return cls.sInstance.processRq(environ, start_response)
 
     def __init__(self, config, in_container):
-        self.mFileDir = config["files"]
+        #self.mFileDir = config["files"]
+        self.mDirFiles = config["dir-files"]
         self.mHtmlBase = (config["html-base"]
             if in_container else None)
         if self.mHtmlBase and self.mHtmlBase.endswith('/'):
             self.mHtmlBase = self.mHtmlBase[:-1]
+    
+    def checkFilePath(self, path):
+        for path_from, path_to in self.mDirFiles:
+            #print('path: ' + path)
+            #print('path_from: ' + path_from)
+            #print('path_to: ' + path_to)
+            if path.startswith(path_from):
+                return path_to + path[len(path_from):]
+        return None
 
     #===============================================
     def parseRequest(self, environ):
@@ -125,7 +135,7 @@ class HServHandler:
         args = {}
         data = ''
         for line in lines:
-            if line.find('----------------') != -1:
+            if line.find('------') != -1:
                 if args != {}:
                     args['data'] = data.strip('\n\r')
                     requests.append(args)
@@ -151,8 +161,9 @@ class HServHandler:
     
 
     #===============================================
-    def fileResponse(self, resp_h, fname,  without_decoding):
-        fpath = self.mFileDir + fname
+    def fileResponse(self, resp_h, fpath,  without_decoding):
+        #fpath = self.mFileDir + fname
+        #print('resp: ' + fpath)
         if not os.path.exists(fpath):
             return False
         if without_decoding:
@@ -162,7 +173,7 @@ class HServHandler:
             with codecs.open(fpath, "r", encoding = "utf-8") as inp:
                 content = inp.read()
         inp.close()
-        return resp_h.makeResponse(mode = fname.rpartition('.')[2],
+        return resp_h.makeResponse(mode = fpath.rpartition('.')[2],
             content = content,  without_decoding = without_decoding)
 
     #===============================================
@@ -172,10 +183,11 @@ class HServHandler:
         resp_h = HServResponse(start_response)
         try:
             path, query_args = self.parseRequest(environ)
+            file_path = self.checkFilePath(path)
             #print('path="' + path)
             #print(query_args)
             if path.find('.') != -1:
-                ret = self.fileResponse(resp_h, path, True)
+                ret = self.fileResponse(resp_h, file_path, True)
                 if ret is not False:
                     return ret
             return ClaudiaService.request(resp_h, path, query_args,  mongo)
@@ -188,20 +200,41 @@ class HServHandler:
             return resp_h.makeResponse(error = 500)
 
 #========================================
+def loadJSonConfig(config_file):
+    with codecs.open(config_file, "r", encoding = "utf-8") as inp:
+        content = inp.read()
+    dir_name = os.path.abspath(__file__)
+    #print('dir_name: ' + dir_name)
+    for idx in range(1):
+        dir_name = os.path.dirname(dir_name)
+        #print('loop ' + str(idx) + ': ' + dir_name)
+    content = content.replace('${HOME}', dir_name)
+    pre_config = json.loads(content)
+
+    file_path_def = pre_config.get("file-path-def")
+    if file_path_def:
+        for key, value in file_path_def.items():
+            assert key != "HOME"
+            content = content.replace('${%s}' % key, value)
+    return json.loads(content)
+
+
 def setupHServer(config_file, in_container):
     if not os.path.exists(config_file):
         logging.critical("No config file provided (%s)" % config_file)
         sys.exit(2)
-    config = None
-    with codecs.open(config_file, "r", encoding = "utf-8") as inp:
-        content = inp.read()
-    config = json.loads(content)
+#    config = None
+#    with codecs.open(config_file, "r", encoding = "utf-8") as inp:
+#        content = inp.read()
+#    config = json.loads(content)
+    config = loadJSonConfig(config_file)
+    #print('new_config: ' + json.dumps(config,  indent=4))
     logging_config = config.get("logging")
     if logging_config:
         logging.config.dictConfig(logging_config)
         logging.basicConfig(level = 0)
     ClaudiaService.start(config, in_container)
-    print('Start server')
+    print('Start server.')
     HServHandler.init(config, in_container)
     if not in_container:
         return (config["host"], int(config["port"]))

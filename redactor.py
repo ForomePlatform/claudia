@@ -41,8 +41,7 @@ class claudiaRedactor:
         if computer == 'noX540LJ':
             template_name = 'cci/viewer/redactor.html'
         else:
-            template_name = '''/home/andrey/work/
-Claudia/claudia/cci/viewer/redactor.html'''
+            template_name = '/home/andrey/work/Claudia/claudia/cci/viewer/redactor.html'
         template_file = open(template_name,  'r')
         template = template_file.read()
         template_file.close()
@@ -111,6 +110,7 @@ class runClaudia():
             file.close()
             q = "java -jar /data/projects/Claudia/lib/hsconnector.jar < "
             out,  err = subprocess.Popen(q + file_name, stdout=subprocess.PIPE, shell=True).communicate()
+            out = out.replace('\r',  '')
             print('generator of chunks: ' + out)
             return out
 
@@ -126,8 +126,11 @@ class runClaudia():
             doc = self.split_to_chunks(text)
             #doc = text
         
-        #tmp_file = '/home/andrey/work/Claudia/claudia/tmp/formula.cla'
-        tmp_file = 'tmp/formula.cla'
+        computer = socket.gethostname()
+        if computer == 'noX540LJ':
+            tmp_file = 'tmp/formula.cla'
+        else:
+            tmp_file = '/home/andrey/work/Claudia/claudia/tmp/formula.cla'
         file = open(tmp_file,  'w')
         file.write(doc)
         file.close()
