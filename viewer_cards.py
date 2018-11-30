@@ -1,4 +1,7 @@
 import re
+import json
+import urllib
+import socket
 from lxml import etree
 from lxml import objectify
 from mongodb import get,  put
@@ -23,6 +26,22 @@ anns = [
 # This class generates a HTML-page for a card  
 class showCard:
     def __init__(self,  args,  mongo=None):
+        computer = socket.gethostname()
+        if computer == 'noX540LJ':
+            html_file = 'cci/viewer/cards.html'
+        else:
+            html_file = '/home/andrey/work/Claudia/claudia/cci/viewer/cards.html'
+        html_file = open(html_file,  'r')
+        html = html_file.read()
+        html = anticache(html)
+        html = html.replace('<ID/>',  args['id'])
+        html = html.replace('<DS/>',  args['ds'])
+        html = html.replace('<FORMULA/>',  args['formula'])
+        html = html.replace('TAB_SELECTED',  str(args['tab']))
+        html_file.close()
+        self.site = html
+    
+    def __inite__(self,  args,  mongo=None):
         number_of_card = args['id']
         if 'flags' in args:
             flags = args['flags'].split('*')
@@ -507,3 +526,60 @@ class showCard:
         etree.cleanup_namespaces(root)
         self.site = etree.tostring(root,  pretty_print = True,  xml_declaration = True)
         return
+
+
+class getCode:
+    def __init__(self,  args,  mongo=None):
+        state = urllib.unquote(args['args'])
+        state = json.loads(state)
+        
+        # Code
+        code = get("code.cla.json",  formula=state['formula'],  
+                                                                mongo=mongo)
+        state['code'] = []
+        for step in code['source']:
+            command = {}
+            command['text'] = step['text']
+            command['id'] = step['source_id']
+            state['code'].append(command)
+        
+        # Doc
+        old_step = len(state['doc'])
+        for n in range(old_step,  state['step'] + 1):
+            doc_data = next_step(code, state['ds'],  state['id'],  
+                                                            n,  mongo)
+            state['doc'].append(doc_data)
+        
+        # Key words
+        state['key_words'] = get('key_words',  number_of_card=state['id'], 
+                            dataset=state['ds'],  mongo=mongo)
+        
+        # Initilal document
+        doc = get('doc.html',  number_of_card=state['id'], 
+                                            dataset=state['ds'],  mongo=mongo)
+        state['initial_doc'] = doc
+        
+        # Annotations
+        doc = get('ch.json',  number_of_card=state['id'], 
+                                            dataset=state['ds'],  mongo=mongo)
+        state['anns'] = doc
+        
+        # Info
+        info = get('doc.json',  number_of_card=state['id'], 
+                                            dataset=state['ds'],  mongo=mongo)
+        if info is None:
+            info = {}
+        state['info'] = info
+        
+        self.site = urllib.quote(json.dumps(state))
+
+
+import datetime
+def anticache(html):
+    now = datetime.datetime.now()
+    s = str(now.second)
+    html = html.replace('.js"',  '.js?v=' + s + '"')
+    html = html.replace(".js'",  ".js?v=" + s + "'")
+    html = html.replace('.css)',  '.css?v=' + s + ')')
+    return html
+

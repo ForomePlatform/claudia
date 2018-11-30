@@ -2,8 +2,6 @@ import json
 import urllib
 import socket
 import datetime
-from lxml import etree
-from lxml import objectify
 from mongodb import get
 
 # Create main page 'index.html'  

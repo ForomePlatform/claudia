@@ -408,6 +408,7 @@ def next_step(code, dataset, number_of_card,  step_id,  mongo):
                                                     number_of_card,  step,  mongo,  True,  step_id)
 #            break
     snapshot(dataset,  number_of_card,  doc_data,  mongo)
+    return doc_data
 
 
 def for_one_doc(doc,  code,  mongo):
