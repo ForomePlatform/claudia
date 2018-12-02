@@ -541,6 +541,8 @@ class getCode:
             command = {}
             command['text'] = step['text']
             command['id'] = step['source_id']
+            command['changes'] = -1
+            command['visible'] = False
             state['code'].append(command)
         
         # Doc

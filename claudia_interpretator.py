@@ -26,8 +26,6 @@ def all_files(dataset,  mongo):
     indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     code = get("code.cla.json", formula=formula, mongo=mongo)
     for number_of_card in indexes:
-#        if number_of_card in  ['152',  '222',  '257', '284',  '326',  '344']:
-#            continue
         print('Card #' + number_of_card)
         doc_data = create_dict(dataset,  number_of_card,  mongo)
         all_steps(code, doc_data, dataset,  number_of_card,  mongo,  False)
@@ -111,8 +109,8 @@ def create_dict_by_doc(nodes):
     return doc_data
 
 def apply_tax(chunk,  step,  mongo,  step_id):
-    if step_id != step['source_id'] and step_id != -1:
-        return
+#    if step_id != step['source_id'] and step_id != -1:
+#        return
     if step['options']['name'] == 'RegExp':
         new_dict = RegExpAnnotator(chunk['text'], step['options']['pattern'])
         key = step['options']['var']
@@ -128,6 +126,8 @@ def apply_tax(chunk,  step,  mongo,  step_id):
 
 def loop(doc_data, dataset, number_of_card,  step,  mongo,  with_snap,  step_id):
     for new_step in step['options']['action']:
+        if step_id not in new_step['steps'] and step_id != -1:
+            continue
         if step['set'] == 'entities':
             all_chunks(one_step,  doc_data,  new_step,  mongo,  step_id)
         elif step['set'] == 'sentences':
@@ -158,7 +158,7 @@ def one_step(data,  step,  mongo,  step_id):
 
 
 def reject(data,  step,  step_id):
-    if step_id != step['source_id'] and step_id != -1:
+    if step_id not in step['steps'] and step_id != -1:
         return
     data['data']['reject'] = 'reject'
 
@@ -167,12 +167,14 @@ def reject(data,  step,  step_id):
 def statement(data,  step,  mongo,  step_id):
     cond = condition(data, step['condition'],  step['args'])
     if cond:
-        for new_step in step['action_if']:
-            return one_step(data,  new_step,  mongo,  step_id)
+        if step_id in step['steps_if'] or step_id == -1:
+            for new_step in step['action_if']:
+                return one_step(data,  new_step,  mongo,  step_id)
     else:
         if 'action_else' in step:
-            for new_step in step['action_else']:
-                return one_step(data,  new_step,  mongo,  step_id)
+            if step_id in step['steps_else'] or step_id == -1:
+                for new_step in step['action_else']:
+                    return one_step(data,  new_step,  mongo,  step_id)
 
 #  Conditional operator 'if'. See 'def statement'.  
 def condition(data,  cond,  args):
@@ -348,7 +350,7 @@ def annotate(data,  step,  step_id):
 #                    n += 1
 #            data['data'][step['key']] = n
 #    if step['key'] not in data['data']:
-    if step_id != step['source_id'] and step_id != -1:
+    if step_id not in step['steps'] and step_id != -1:
         return
     data['data'][step['key']] = step['key']
     data['data'].update(step['options'])
@@ -372,6 +374,8 @@ def setFinalAnnotation(doc_data,  step):
 #  Snapshots are in 'snap-file'.  
 def claudia_interpretator(doc_data, dataset, 
                     number_of_card,  step,  mongo, with_snap,  step_id):
+    if step_id not in step['steps'] and step_id != -1:
+        return doc_data
     if step['action'] == 'for':
         loop(doc_data, dataset,  number_of_card,  
                                         step,  mongo, with_snap,  step_id)
@@ -394,7 +398,6 @@ def claudia_interpretator(doc_data, dataset,
 #  It's independent with 'def all_files'.
 def next_step(code, dataset, number_of_card,  step_id,  mongo):
 #def next_step(doc_file_name,  code_file_name, snap_file_name, step_id):
-    print('step: ' + str(step_id))
     if step_id == 0:
         doc_data = create_dict(dataset, number_of_card,  mongo)
         snapshot(dataset,  number_of_card,  doc_data,  mongo)
@@ -405,7 +408,7 @@ def next_step(code, dataset, number_of_card,  step_id,  mongo):
     #print('statements: ' + json.dumps(code['source']))
     for step in code['statements']:
         claudia_interpretator(doc_data, dataset, 
-                                                    number_of_card,  step,  mongo,  True,  step_id)
+                                                    number_of_card,  step,  mongo,  False,  step_id)
 #            break
     snapshot(dataset,  number_of_card,  doc_data,  mongo)
     return doc_data

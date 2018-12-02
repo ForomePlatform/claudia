@@ -337,6 +337,7 @@ def collection(words,  source_id,  annotations):
         lookup['action'] = 'detect'
         lookup['options'] = {}
         lookup['source_id'] = source_id['id']
+        lookup['steps'] = [source_id['id']]
         lookup['name'] = 'lookup'
         if words[4] == 'RegExp':
             if len(words) != 11 or words[5] != '(' or words[7] != ',' or words[9:11] != [')',  ')']:
@@ -365,6 +366,7 @@ def collection(words,  source_id,  annotations):
         action['name'] = 'setFinalAnnotations'
         source_id['id'] += 1
         action['source_id'] = source_id['id']
+        action['steps'] = [source_id['id']]
         action['options'] = {}
         action['options']['key'] = words[4]
         return action
@@ -429,24 +431,28 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
         return
     level = -1
     statements = []
+    steps = []
     vars = old_vars
+    
     while n < len(lines):
         #print('line ' + str(n) + ': ' + lines[n])
         words = split_to_words(lines[n])
         while '' in words:
             words.remove('')
-        #print('words: ' + str(words))
         if words == []:
             n += 1
             continue
         if level == -1:
             level = get_level(lines[n])
+        # Go out to higher level
         if get_level(lines[n]) < level:
             response = {}
             response['action'] = statements
             response['line'] = n
             response['source'] = source
+            response['steps'] = steps
             return response
+        # Import taxonomies
         if words[0] == 'import':
             s = ''.join(words[1:])
             anns = s.split(',')
@@ -480,11 +486,13 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
                                             {'key': 'procedure',  'values': ['CXR']}]
                 annotations.append(annotation)
             n += 1
+        # Apply taxonomies (lookup), seFinalAnnotations
         elif words[0] == 'collection':
             res = collection(words,  source_id,  annotations)
             if res['action'] == 'error':
                 res['line'] = n
                 return res
+            steps.extend(res['steps'])
             statements.append(res)
             source_line = {}
             source_line['source_id'] = source_id['id']
@@ -493,23 +501,21 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
             source_line['text'] = old_source + '\n' + lines[n]
             source.append(source_line)
             n += 1
+        # Definition of an annotation
         elif words[1:6] == ['=',  'collection',  '.',  'defineAnnotation',  '(']:
             ann = words[6:-1]
             definition = defineAnnotation(ann)
-            #print('definition: ' +str(definition))
             if 'message' in definition:
                 definition['line'] = n
                 return definition
             annotations.append(definition)
-            #statements.append(definition)
             n += 1
+        # Loop
         elif words[0] == 'for' and words[2] == 'in' and words[-1] == ':':
             loop = cycle(words,  vars)
-            #loop['line'] = n
             if loop['action'] == 'error':
                 return loop
             n += 1
-            # print('for line: ' + lines[n])
             res = compilator(lines[n:],  vars,  source_id,  old_source,  annotations)
             if res['action'] == 'error':
                 res['line'] += n
@@ -517,13 +523,18 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
             n += res['line']
             source.extend(res['source'])
             res.pop('source')
+            steps.extend(res['steps'])
+            loop['steps'] = res['steps']
+            res.pop('steps')
             loop['options'] = res
             statements.append(loop)
             vars.remove(words[1])
+        # Condition operator
         elif words[0] == 'if':
             operator_if = {}
             operator_if['name'] = 'if'
             operator_if['action'] = 'detect'
+            operator_if['steps'] = []
             operator_if['options'] = {}
             
             text = lines[n]
@@ -556,8 +567,9 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
                 action_if['line'] = n
                 return action_if
             source.extend(action_if['source'])
-            action_if.pop('source')
+            operator_if['options']['steps_if'] = action_if['steps']
             operator_if['options']['action_if'] = action_if['action']
+            operator_if['steps'].extend(action_if['steps'])
             n += action_if['line']
             words = split_to_words(lines[n])
             
@@ -572,13 +584,14 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
                     action_else['line'] = n
                     return action_else
                 source.extend(action_else['source'])
-                action_else.pop('source')
+                operator_if['options']['steps_else'] = action_else['steps']
                 operator_if['options']['action_else'] = action_else['action']
+                operator_if['steps'].extend(action_else['steps'])
                 n += action_else['line']
-                #source_line['text'] = action_else['source']
                 
+            steps.extend(operator_if['steps'])
             statements.append(operator_if)
-            #source.append(source_line)
+        # Reject and add an annotation
         elif words[0] in vars:
             res = variable(words,  source_id)
             res['line'] = n
@@ -590,7 +603,8 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
             source_line['column'] = level
             source_line['text'] = old_source + '\n' + lines[n]
             source.append(source_line)
-            #res['source'] = source_line
+            steps.append(source_id['id'])
+            res['steps'] = [source_id['id']]
             statements.append(res)
             n += 1
         else:
@@ -603,6 +617,7 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
     response['action'] = statements
     response['line'] = n
     response['source'] = source
+    response['steps'] = steps
     return response
 
 negation = {
@@ -650,12 +665,12 @@ def start_compilator(claudia,  claudia_file_name):
         return code
 
 if __name__ == '__main__':
-    claudia_file_name = 'MI'
-    claudia = get('code.cla', formula=claudia_file_name,  from_file=True)
-    code = start_compilator(claudia,  claudia_file_name)
-    file = open('cci/claudia_rules/' + claudia_file_name + '.cla.json',  'w')
-    file.write(json.dumps(code,  indent=4))
-    file.close()
     mongo = connect()
-    put('code.cla.json',  code,  formula=claudia_file_name,  mongo=mongo)
+    for claudia_file_name in ['CHF', 'MI']:
+        claudia = get('code.cla', formula=claudia_file_name,  from_file=True)
+        code = start_compilator(claudia,  claudia_file_name)
+        file = open('cci/claudia_rules/' + claudia_file_name + '.cla.json',  'w')
+        file.write(json.dumps(code,  indent=4))
+        file.close()
+        put('code.cla.json',  code,  formula=claudia_file_name,  mongo=mongo)
     print('Ok.')
