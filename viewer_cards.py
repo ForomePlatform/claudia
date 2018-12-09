@@ -2,6 +2,7 @@ import re
 import json
 import urllib
 import socket
+import copy
 from lxml import etree
 from lxml import objectify
 from mongodb import get,  put
@@ -22,7 +23,9 @@ anns = [
             'contains_number', 
             'text'
             ]
-            
+
+snap_file_name = "tmp/snapshot.json"
+
 # This class generates a HTML-page for a card  
 class showCard:
     def __init__(self,  args,  mongo=None):
@@ -528,10 +531,15 @@ class showCard:
         return
 
 
-class getCode:
+class getInfo:
     def __init__(self,  args,  mongo=None):
         state = urllib.unquote(args['args'])
         state = json.loads(state)
+        print(json.dumps(state,  indent=4))
+        
+        snap_file = open(snap_file_name,  'w')
+        snap_file.write(json.dumps([]))
+        snap_file.close()
         
         # Code
         code = get("code.cla.json",  formula=state['formula'],  
@@ -544,13 +552,6 @@ class getCode:
             command['changes'] = -1
             command['visible'] = False
             state['code'].append(command)
-        
-        # Doc
-        old_step = len(state['doc'])
-        for n in range(old_step,  state['step'] + 1):
-            doc_data = next_step(code, state['ds'],  state['id'],  
-                                                            n,  mongo)
-            state['doc'].append(doc_data)
         
         # Key words
         state['key_words'] = get('key_words',  number_of_card=state['id'], 
@@ -573,8 +574,62 @@ class getCode:
             info = {}
         state['info'] = info
         
+        #print(json.dumps(state,  indent=4))
+        
         self.site = urllib.quote(json.dumps(state))
 
+
+class runCode:
+    def __init__(self,  args,  mongo):
+        req = urllib.unquote(args['args'])
+        req = json.loads(req)
+        print('req' + str(req))
+        code = get("code.cla.json",  formula=req['formula'],  
+                                                                mongo=mongo)
+        doc = []
+        doc_data = {}
+        n = 0
+        while True:
+            print('Step: ' + str(n))
+            doc_data = next_step(doc_data,  code, req['ds'],  req['id'],  
+                                                            n,  mongo)
+            if doc_data is None:
+                break
+            doc.append(doc_data)
+            # Save to file
+            snap_file = open(snap_file_name,  'w')
+            snap_file.write(json.dumps(doc,  indent=4))
+            snap_file.close()
+            n += 1
+        answer = 'ready'
+        self.site = urllib.quote(json.dumps(answer,  indent=4))
+
+
+class getCode:
+    def __init__(self,  args,  mongo):
+        req = urllib.unquote(args['args'])
+        req = json.loads(req)
+        print('req: '+ str(req))
+        snap_file = open(snap_file_name,  'r')
+        doc = json.loads(snap_file.read())
+        snap_file.close()
+        if doc == []:
+            doc_data = {}
+        else:
+            doc_data = doc[-1]
+        code = get("code.cla.json",  formula=req['formula'],  
+                                                                mongo=mongo)
+        for n in range(len(doc),  req['new_step'] + 1):
+            print('Step: '  + str(n))
+            doc_data = next_step(doc_data,  code, req['ds'],  req['id'],  
+                                                            n,  mongo)
+            doc_copy = copy.deepcopy(doc_data)
+            doc.append(doc_copy)
+        new_cadres = doc[req['step']:]
+        snap_file = open(snap_file_name,  'w')
+        snap_file.write(json.dumps(doc,  indent=4))
+        snap_file.close()
+        self.site = urllib.quote(json.dumps(new_cadres))
 
 import datetime
 def anticache(html):

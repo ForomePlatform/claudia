@@ -658,6 +658,7 @@ def start_compilator(claudia,  claudia_file_name):
         code['declarations'] = negation
         code['statements'] = ret['action']
         code['source'] = ret['source']
+        code['count_of_steps'] = len(ret['steps'])
         for source in code['source']:
             #print('source-id: ' + str(source['source_id']))
             while source['text'].find('  ') != -1:

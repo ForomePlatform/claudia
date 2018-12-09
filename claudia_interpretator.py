@@ -155,6 +155,7 @@ def one_step(data,  step,  mongo,  step_id):
     else:
         print('Unknown action: ' + step['action'])
         sys.exit(2)
+    return data
 
 
 def reject(data,  step,  step_id):
@@ -396,20 +397,20 @@ def claudia_interpretator(doc_data, dataset,
 #  Apply the interpretator for a step 'step_id' of JSON-code in 'code_file_name'
 #  for a document 'doc_file_name'. 'snap_file_name' is a snaphot file.
 #  It's independent with 'def all_files'.
-def next_step(code, dataset, number_of_card,  step_id,  mongo):
+def next_step(doc_data,  code, dataset, number_of_card,  step_id,  mongo):
 #def next_step(doc_file_name,  code_file_name, snap_file_name, step_id):
     if step_id == 0:
         doc_data = create_dict(dataset, number_of_card,  mongo)
-        snapshot(dataset,  number_of_card,  doc_data,  mongo)
-    doc_data = get("snap.json", dataset=dataset,  
-                                number_of_card=number_of_card,  mongo=mongo)
+        #snapshot(dataset,  number_of_card,  doc_data,  mongo)
+    if step_id > code['count_of_steps']:
+        return
+    #doc_data = get("snap.json", dataset=dataset,  
+    #                            number_of_card=number_of_card,  mongo=mongo)
     if doc_data is None:
         doc_data = create_dict(dataset,  number_of_card,  mongo)
-    #print('statements: ' + json.dumps(code['source']))
     for step in code['statements']:
         claudia_interpretator(doc_data, dataset, 
                                                     number_of_card,  step,  mongo,  False,  step_id)
-#            break
     snapshot(dataset,  number_of_card,  doc_data,  mongo)
     return doc_data
 

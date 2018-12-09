@@ -240,9 +240,39 @@ def setupHServer(config_file, in_container):
         return (config["host"], int(config["port"]))
     return None
 
+
 #========================================
 def application(environ, start_response):
+#    answer = {}
+#    answer['answer'] = None
+#    Threads(environ,  start_response,  answer).start()
+#    file = open('tmp/answer',  'r')
+#    answer = json.loads(file.read())
+#    file.close()
+#    return answer
     return HServHandler.request(environ, start_response)
+
+
+
+import threading
+class Threads(threading.Thread):
+    def run(self):
+        print('Run: ')
+        res = HServHandler.request(self.environ, self.start_response)
+        self.answer['answer'] = res
+        file = open('tmp/answer',  'w')
+        file.write(json.dumps(res))
+        file.close()
+        #print('All right res: ' + str(res))
+        return res
+
+    def __init__(self, environ,  start_response,  answer):
+        self.environ = environ
+        self.start_response = start_response
+        self.answer = answer
+        print('Before init')
+        threading.Thread.__init__(self)
+        print('After init')
 
 #========================================
 if __name__ == '__main__':

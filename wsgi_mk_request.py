@@ -1,6 +1,8 @@
 from viewer import showIndex
 from viewer import cardList
 from viewer_cards import showCard
+from viewer_cards import getInfo
+from viewer_cards import runCode
 from viewer_cards import getCode
 from redactor import claudiaRedactor
 from redactor import runClaudia
@@ -31,6 +33,12 @@ class ClaudiaService:
         elif rq_path == "/list":
             return serv_h.makeResponse(
                 content = cardList(rq_args['data'],  mongo).site)
+        elif rq_path == "/card/info":
+            return serv_h.makeResponse(
+                content = getInfo(rq_args['data'],  mongo).site)
+        elif rq_path == "/card/run":
+            return serv_h.makeResponse(
+                content = runCode(rq_args['data'],  mongo).site)
         elif rq_path == "/card/code":
             return serv_h.makeResponse(
                 content = getCode(rq_args['data'],  mongo).site)

@@ -111,7 +111,11 @@ class runClaudia():
             q = "java -jar /data/projects/Claudia/lib/hsconnector.jar < "
             out,  err = subprocess.Popen(q + file_name, stdout=subprocess.PIPE, shell=True).communicate()
             out = out.replace('\r',  '')
-            print('generator of chunks: ' + out)
+            # print('generator of chunks: ' + out)
+            file_name = '/home/andrey/work/Claudia/claudia/tmp/chunks.txt'
+            file = open(file_name,  'w')
+            file.write(out)
+            file.close()
             return out
 
     def generator_of_chunks(self,  text, mongo):
