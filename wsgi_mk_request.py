@@ -42,6 +42,9 @@ class ClaudiaService:
         elif rq_path == "/card/code":
             return serv_h.makeResponse(
                 content = getCode(rq_args['data'],  mongo).site)
+        elif rq_path == "/card/clear":
+            return serv_h.makeResponse(
+                content = clearCache(rq_args['data'],  mongo).site)
 
 
         return serv_h.makeResponse(error = 404)

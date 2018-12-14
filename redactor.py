@@ -1,7 +1,8 @@
 #import json
+import os
 import urllib
 import socket
-import subprocess
+#import subprocess
 from lxml import etree
 from mongodb import get
 from claudia_interpretator import for_one_doc
@@ -104,18 +105,20 @@ class runClaudia():
         if computer == 'noX540LJ':
             return text
         else:
-            file_name = '/home/andrey/work/Claudia/claudia/tmp/text.txt'
-            file = open(file_name,  'w')
-            file.write(text)
-            file.close()
-            q = "java -jar /data/projects/Claudia/lib/hsconnector.jar < "
-            out,  err = subprocess.Popen(q + file_name, stdout=subprocess.PIPE, shell=True).communicate()
+            in_file_name = 'tmp/text.txt'
+            out_file_name = 'tmp/chunks.html'
+            in_file = open(in_file_name,  'w')
+            in_file.write(text)
+            in_file.close()
+            q_source = "java -jar /data/projects/Claudia/lib/hsconnector.jar"
+            q = q_source + " < " + in_file_name + " > " + out_file_name
+            #out,  err = subprocess.Popen(q + in_file_name, stdout=subprocess.PIPE, shell=True).communicate()
+            os.system(q)
+            out_file = open(out_file_name,  'r')
+            out = out_file.read()
+            out_file.close()
             out = out.replace('\r',  '')
             # print('generator of chunks: ' + out)
-            file_name = '/home/andrey/work/Claudia/claudia/tmp/chunks.txt'
-            file = open(file_name,  'w')
-            file.write(out)
-            file.close()
             return out
 
     def generator_of_chunks(self,  text, mongo):
