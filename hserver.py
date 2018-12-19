@@ -282,6 +282,7 @@ if __name__ == '__main__':
     else:
         config_file = "claudia.json"
 
+    from threads_for_server import MyThreadWSGI
     from wsgiref.simple_server import make_server, WSGIRequestHandler
     #log_file_name = config["logging"]['handlers']['default']['filename']
     #os.remove(log_file_name)
@@ -295,7 +296,7 @@ if __name__ == '__main__':
 
     #========================================
     host, port = setupHServer(config_file, False)
-    httpd = make_server(host, port, application,
+    httpd = make_server(host, port, application, server_class=MyThreadWSGI, 
         handler_class = _LoggingWSGIRequestHandler)
     logging.info("HServer listening %s:%d" % (host, port))
     mongo = connect()
