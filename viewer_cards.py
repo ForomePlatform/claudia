@@ -26,20 +26,23 @@ snap_file_name = "tmp/snapshot.json"
 
 # This class generates a HTML-page for a card  
 class showCard:
-    def __init__(self,  args,  mongo=None):
+    def __init__(self,  args,  mongo,  lock):
         computer = socket.gethostname()
         if computer == 'noX540LJ':
             html_file = 'cci/viewer/cards.html'
         else:
             html_file = '/home/andrey/work/Claudia/claudia/cci/viewer/cards.html'
+        lock.acquire()
         html_file = open(html_file,  'r')
         html = html_file.read()
+        html_file.close()
+        lock.release()
+        
         html = anticache(html)
         html = html.replace('<ID/>',  args['id'])
         html = html.replace('<DS/>',  args['ds'])
         html = html.replace('<FORMULA/>',  args['formula'])
         html = html.replace('TAB_SELECTED',  str(args['tab']))
-        html_file.close()
         self.site = html
     
 #    def __inite__(self,  args,  mongo=None):
@@ -528,16 +531,17 @@ class showCard:
 #        self.site = etree.tostring(root,  pretty_print = True,  xml_declaration = True)
 #        return
 
-
 class getInfo:
-    def __init__(self,  args,  mongo=None):
+    def __init__(self,  args,  mongo,  lock):
         state = urllib.unquote(args['args'])
         state = json.loads(state)
         print(json.dumps(state,  indent=4))
         
-        snap_file = open(snap_file_name,  'w')
-        snap_file.write(json.dumps([]))
-        snap_file.close()
+#        lock.acquire()
+#        snap_file = open(snap_file_name,  'w')
+#        snap_file.write(json.dumps([]))
+#        snap_file.close()
+#        lock.release()
         
         # Code
         code = get("code.cla.json",  formula=state['formula'],  
@@ -573,11 +577,13 @@ class getInfo:
         state['info'] = info
         
         # Ticket
+        lock.acquire()
         cch = ClaudiaCacheHandler('claudia')
         if state['ticket'] != 'admin':
             state['ticket'] = cch.getFreeTicket()
             if state['ticket'] is None:
                 state['ticket'] = 'admin'
+        lock.release()
         print('ticket: ' + state['ticket'])
         
         #print(json.dumps(state,  indent=4))
@@ -586,7 +592,7 @@ class getInfo:
 
 
 class runCode:
-    def __init__(self,  args,  mongo):
+    def __init__(self,  args,  mongo,  lock):
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         print('req' + str(req))
@@ -612,11 +618,12 @@ class runCode:
 
 
 class getCode:
-    def __init__(self,  args,  mongo):
+    def __init__(self,  args,  mongo,  lock):
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         print('req: '+ str(req))
         
+        lock.acquire()
         if req['ticket'] == 'admin':
             snap_file = open(snap_file_name,  'r')
             doc = json.loads(snap_file.read())
@@ -628,6 +635,7 @@ class getCode:
             #print('doc: ' + str(doc))
             if doc is None:
                 doc= []
+        lock.release()
         
         if doc == []:
             doc_data = {}
@@ -643,12 +651,14 @@ class getCode:
             doc.append(doc_copy)
         new_cadres = doc[req['step']+1:]
         
+        lock.acquire()
         if req['ticket'] == 'admin':
             snap_file = open(snap_file_name,  'w')
             snap_file.write(json.dumps(doc,  indent=4))
             snap_file.close()
         else:
             cch.putValue(req['ticket'], doc)
+        lock.release()
         self.site = urllib.quote(json.dumps(new_cadres))
 
 import datetime
@@ -661,10 +671,12 @@ def anticache(html):
     return html
 
 class clearCache:
-    def __init__(self,  args,  mongo):
+    def __init__(self,  args,  mongo,  lock):
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         print('req: ' + str(req))
+        lock.acquire()
         cch = ClaudiaCacheHandler()
         cch.removeTicket(req['ticket'])
+        lock.release()
         self.site = 'Ok.'

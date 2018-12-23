@@ -163,7 +163,6 @@ class HServHandler:
     #===============================================
     def fileResponse(self, resp_h, fpath,  without_decoding):
         #fpath = self.mFileDir + fname
-        #print('resp: ' + fpath)
         if not os.path.exists(fpath):
             return False
         if without_decoding:
@@ -178,7 +177,6 @@ class HServHandler:
 
     #===============================================
     def processRq(self, environ, start_response):
-        # global mongo
         mongo = connect()
         resp_h = HServResponse(start_response)
         try:
@@ -228,7 +226,6 @@ def setupHServer(config_file, in_container):
 #        content = inp.read()
 #    config = json.loads(content)
     config = loadJSonConfig(config_file)
-    #print('new_config: ' + json.dumps(config,  indent=4))
     logging_config = config.get("logging")
     if logging_config:
         logging.config.dictConfig(logging_config)
@@ -243,36 +240,55 @@ def setupHServer(config_file, in_container):
 
 #========================================
 def application(environ, start_response):
-#    answer = {}
-#    answer['answer'] = None
-#    Threads(environ,  start_response,  answer).start()
-#    file = open('tmp/answer',  'r')
-#    answer = json.loads(file.read())
-#    file.close()
-#    return answer
     return HServHandler.request(environ, start_response)
 
+#========================================
 
-
+#from threads_for_server import MyThreadPool
 import threading
-class Threads(threading.Thread):
-    def run(self):
-        print('Run: ')
-        res = HServHandler.request(self.environ, self.start_response)
-        self.answer['answer'] = res
-        file = open('tmp/answer',  'w')
-        file.write(json.dumps(res))
-        file.close()
-        #print('All right res: ' + str(res))
-        return res
+from threads_for_server import MyThreadWSGI
+from wsgiref.simple_server import make_server, WSGIRequestHandler
 
-    def __init__(self, environ,  start_response,  answer):
-        self.environ = environ
-        self.start_response = start_response
-        self.answer = answer
-        print('Before init')
-        threading.Thread.__init__(self)
-        print('After init')
+class _LoggingWSGIRequestHandler(WSGIRequestHandler):
+    def log_message(self, format, *args):
+        logging.info(("%s - - [%s] %s\n" %
+            (self.client_address[0], self.log_date_time_string(),
+            format % args)).rstrip())
+
+class MyThreadPool:
+    def __init__(self,  num_threads,  host,  port):
+        self.num_threads = num_threads
+        self.daemon_threads = False
+        self.threads = []
+        self.httpd = make_server(host, port, application, 
+                        handler_class = _LoggingWSGIRequestHandler)
+        
+    def run(self):
+        for n in range(self.num_threads):
+            t = threading.Thread(target = self.httpd.serve_forever)
+            t.daemon = self.daemon_threads
+            t.start()
+            self.threads.append(t)
+            logging.info('Thread ' + str(n) + ': ' + t.getName())
+
+class ThreadServer:
+    def __init__(self,  host,  port,  count_of_threads):
+        self.countOfThreads = count_of_threads
+        self.pool = MyThreadPool(self.countOfThreads,  host,  port)
+    
+    def start(self):
+        self.pool.run()
+    
+    def stop(self):
+        logging.info('Interrupting of all threads...')
+        for n in range(self.num_threads):
+            self.threads[n].join()
+
+    def except_hook(self, exctype, value, traceback):
+        if exctype == KeyboardInterrupt:
+            print('Interrupt...')
+            self.stop()
+        sys.__excepthook__(exctype, value, traceback)
 
 #========================================
 if __name__ == '__main__':
@@ -282,25 +298,35 @@ if __name__ == '__main__':
     else:
         config_file = "claudia.json"
 
-    from threads_for_server import MyThreadWSGI
-    from wsgiref.simple_server import make_server, WSGIRequestHandler
+    #from threads_for_server import MyThreadWSGI
+    #from wsgiref.simple_server import make_server, WSGIRequestHandler
     #log_file_name = config["logging"]['handlers']['default']['filename']
     #os.remove(log_file_name)
+    
+    
 
     #========================================
-    class _LoggingWSGIRequestHandler(WSGIRequestHandler):
-        def log_message(self, format, *args):
-            logging.info(("%s - - [%s] %s\n" %
-                (self.client_address[0], self.log_date_time_string(),
-                format % args)).rstrip())
+#    class _LoggingWSGIRequestHandler(WSGIRequestHandler):
+#        def log_message(self, format, *args):
+#            logging.info(("%s - - [%s] %s\n" %
+#                (self.client_address[0], self.log_date_time_string(),
+#                format % args)).rstrip())
 
     #========================================
     host, port = setupHServer(config_file, False)
-    httpd = make_server(host, port, application, server_class=MyThreadWSGI, 
-        handler_class = _LoggingWSGIRequestHandler)
+    #httpd = make_server(host, port, application, server_class=MyThreadWSGI, 
+    #    handler_class = _LoggingWSGIRequestHandler)
     logging.info("HServer listening %s:%d" % (host, port))
     mongo = connect()
-    httpd.serve_forever()
+    #httpd.serve_forever()
+    config = loadJSonConfig(config_file)
+    print('Count of threads: ' + str(config['count_of_threads']))
+    httpd = ThreadServer(host,  port,  config['count_of_threads'])
+    #import signal
+    #signal(signal.SIGQUIT,  httpd.stop)
+    sys.excepthook = httpd.except_hook
+    httpd.start()
+    
 else:
     mongo = connect()
     logging.basicConfig(level = 10)

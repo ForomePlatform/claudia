@@ -1,7 +1,6 @@
 import json
 import urllib
 import socket
-import datetime
 from mongodb import get
 
 # Create main page 'index.html'  
@@ -57,7 +56,7 @@ def difference(list1,  list2):
     return res
 
 class showIndex:
-    def __init__(self,  args,  mongo):
+    def __init__(self,  args,  mongo,  lock):
         computer = socket.gethostname()
         if computer == 'noX540LJ':
             html_file = 'cci/viewer/viewer.html'
@@ -336,10 +335,11 @@ class showIndex:
 
 
 class cardList:
-    def __init__(self,  args,  mongo):
+    def __init__(self,  args,  mongo,  lock):
         state = urllib.unquote(args['args'])
         state = json.loads(state)
         # Find all cards selected in pivot table
+        lock.acquire()
         ids = get('all_indexes',  dataset=state['ds'],  mongo=mongo)
         list_apostriory = get('calculated_indexes',  dataset=state['ds'],
                                             formula='CHF',  mongo=mongo)
@@ -366,6 +366,7 @@ class cardList:
         else:
             ids1 = get("tax.idx", dataset=state['ds'],  
                             taxonomy=tax['tax'],  mongo=mongo)
+        lock.release()
         if not tax['flag']:
             need_list = intersection(need_list,  ids1)
         else:
@@ -387,6 +388,7 @@ class cardList:
         if state['portion']*cards_in_one_portion > len(need_list):
             state['portion'] = 0
         cut_need_list = need_list[state['portion']*cards_in_one_portion:(state['portion']+1)*cards_in_one_portion]
+        lock.acquire()
         for stat in apriory:
             chf[stat] = get("results_apriory." + stat,  dataset = state['ds'],  
                                         formula='CHF',  mongo=mongo)
@@ -406,5 +408,6 @@ class cardList:
             abs = abs.replace('&',  '&amp;')
             card['abstract'] = abs
             state['list'].append(card)
+        lock.release()
         self.site = urllib.quote(json.dumps(state))
         

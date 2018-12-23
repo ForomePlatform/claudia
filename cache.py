@@ -36,7 +36,8 @@ class ClaudiaCacheHandler:
     
     def checkout(self,  ticket):
         tickets = self.getTickets()
-        tickets.remove(ticket)
+        if ticket in tickets:
+            tickets.remove(ticket)
         self.putValue('tickets',  tickets)
         
     # Remove a ticket and all its data
@@ -81,6 +82,8 @@ class ClaudiaCacheHandler:
                 if data == '':
                     return None
                 else:
+                    #print('len: ' + str(len(data)))
+                    #print('parts: ' + str(n))
                     return json.loads(data)
             else:
                 data += part

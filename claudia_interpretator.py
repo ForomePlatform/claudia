@@ -399,25 +399,29 @@ def claudia_interpretator(doc_data, dataset,
 #  It's independent with 'def all_files'.
 def next_step(doc_data,  code, dataset, number_of_card,  step_id,  mongo):
 #def next_step(doc_file_name,  code_file_name, snap_file_name, step_id):
-    if step_id == 0:
+    if step_id == 0 and number_of_card is not None:
         doc_data = create_dict(dataset, number_of_card,  mongo)
-        #snapshot(dataset,  number_of_card,  doc_data,  mongo)
     if step_id > code['count_of_steps']:
         return
-    #doc_data = get("snap.json", dataset=dataset,  
-    #                            number_of_card=number_of_card,  mongo=mongo)
     if doc_data is None:
         doc_data = create_dict(dataset,  number_of_card,  mongo)
     for step in code['statements']:
         claudia_interpretator(doc_data, dataset, 
                                                     number_of_card,  step,  mongo,  False,  step_id)
-    snapshot(dataset,  number_of_card,  doc_data,  mongo)
+    #snapshot(dataset,  number_of_card,  doc_data,  mongo)
     return doc_data
 
 
-def for_one_doc(doc,  code,  mongo):
+def for_one_doc(doc,  code,  mongo,  cch,  ticket,  lock):
     doc_data = create_dict_by_doc(doc)
+    state = {}
+    state['count_of_steps'] = code['count_of_steps']
     for step in code['statements']:
+        lock.acquire()
+        state['step'] = step
+        print('Step: ' + str(step))
+        cch.putValue(ticket,  state)
+        lock.release()
         claudia_interpretator(doc_data, None, 
                             None,  step,  mongo,  False,  -1)
     #print("Results of the formula: " + json.dumps(doc_data,  indent=4))
