@@ -188,7 +188,7 @@ class HServHandler:
                 ret = self.fileResponse(resp_h, file_path, True)
                 if ret is not False:
                     return ret
-            return ClaudiaService.request(resp_h, path, query_args,  mongo)
+            return ClaudiaService.request(resp_h, path, query_args,  mongo, thread, httpd)
         except Exception:
             rep = StringIO()
             traceback.print_exc(file = rep)
@@ -246,7 +246,6 @@ def application(environ, start_response):
 
 #from threads_for_server import MyThreadPool
 import threading
-from threads_for_server import MyThreadWSGI
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 class _LoggingWSGIRequestHandler(WSGIRequestHandler):
@@ -259,22 +258,39 @@ class MyThreadPool:
     def __init__(self,  num_threads,  host,  port):
         self.num_threads = num_threads
         self.daemon_threads = False
-        self.threads = []
+        self.threads = {}
         self.httpd = make_server(host, port, application, 
                         handler_class = _LoggingWSGIRequestHandler)
         
     def run(self):
         for n in range(self.num_threads):
-            t = threading.Thread(target = self.httpd.serve_forever)
+            #t = threading.Thread(target = self.httpd.serve_forever)
+            t = threading.Thread(target = self.thread_init)
             t.daemon = self.daemon_threads
             t.start()
-            self.threads.append(t)
+            self.threads[t.getName()] = t
             logging.info('Thread ' + str(n) + ': ' + t.getName())
+    
+    def thread_init(self):
+        lock = threading.Lock()
+        lock.acquire()
+        for i in range(self.num_threads):
+            name = 'Thread-' + str(i)
+            if name not in httpd.mLocks:
+                httpd.mLocks[name] = lock
+                global thread
+                thread = name
+                print('Start: ' + thread)
+        self.httpd.serve_forever()
 
 class ThreadServer:
     def __init__(self,  host,  port,  count_of_threads):
         self.countOfThreads = count_of_threads
         self.pool = MyThreadPool(self.countOfThreads,  host,  port)
+        self.results = []
+        self.mLocks = {}
+        for thread in self.pool.threads:
+            self.mLocks[thread.getName()] = threading.Lock()
     
     def start(self):
         self.pool.run()
@@ -321,6 +337,7 @@ if __name__ == '__main__':
     #httpd.serve_forever()
     config = loadJSonConfig(config_file)
     print('Count of threads: ' + str(config['count_of_threads']))
+    global httpd
     httpd = ThreadServer(host,  port,  config['count_of_threads'])
     #import signal
     #signal(signal.SIGQUIT,  httpd.stop)
