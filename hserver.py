@@ -5,6 +5,7 @@ import logging.config
 
 from mongodb import connect
 from wsgi_mk_request import ClaudiaService
+from cache import ClaudiaCacheHandler
 
 #========================================
 class HServResponse:
@@ -188,7 +189,7 @@ class HServHandler:
                 ret = self.fileResponse(resp_h, file_path, True)
                 if ret is not False:
                     return ret
-            return ClaudiaService.request(resp_h, path, query_args,  mongo, httpd)
+            return ClaudiaService.request(resp_h, path, query_args,  mongo, httpd,  cch)
         except Exception:
             rep = StringIO()
             traceback.print_exc(file = rep)
@@ -275,7 +276,7 @@ class MyThreadPool:
         lock = threading.Lock()
         lock.acquire()
         for i in range(self.num_threads):
-            name = 'Thread-' + str(i)
+            name = threading.currentThread().getName()
             if name not in httpd.mLocks:
                 httpd.mLocks[name] = lock
                 print('current: ' + str(threading.currentThread().getName()))
@@ -283,9 +284,10 @@ class MyThreadPool:
         self.httpd.serve_forever()
 
 class ThreadServer:
-    def __init__(self,  host,  port,  count_of_threads):
-        self.countOfThreads = count_of_threads
-        self.pool = MyThreadPool(self.countOfThreads,  host,  port)
+    def __init__(self,  host,  port,  num_threads=20):
+        self.countOfThreads = num_threads
+        if host is not None and port is not None:
+            self.pool = MyThreadPool(self.countOfThreads,  host,  port)
         self.results = {}
         self.mLocks = {}
 #        for thread in self.pool.threads:
@@ -306,6 +308,8 @@ class ThreadServer:
         sys.__excepthook__(exctype, value, traceback)
 
 #========================================
+global httpd
+global cch
 if __name__ == '__main__':
     logging.basicConfig(level = 0)
     if len(sys.argv) > 1:
@@ -333,11 +337,11 @@ if __name__ == '__main__':
     #    handler_class = _LoggingWSGIRequestHandler)
     logging.info("HServer listening %s:%d" % (host, port))
     mongo = connect()
+    cch = ClaudiaCacheHandler('claudia')
     #httpd.serve_forever()
     config = loadJSonConfig(config_file)
     print('Count of threads: ' + str(config['count_of_threads']))
-    global httpd
-    httpd = ThreadServer(host,  port,  config['count_of_threads'])
+    httpd = ThreadServer(host,  port,  num_threads=config['count_of_threads'])
     #import signal
     #signal(signal.SIGQUIT,  httpd.stop)
     sys.excepthook = httpd.except_hook
@@ -345,5 +349,7 @@ if __name__ == '__main__':
     print(threading.enumerate())
 else:
     mongo = connect()
+    cch = ClaudiaCacheHandler('claudia')
+    httpd = ThreadServer(None,  None)
     logging.basicConfig(level = 10)
     setupHServer("claudia/claudia.json", True)

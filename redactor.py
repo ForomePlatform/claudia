@@ -55,9 +55,9 @@ class claudiaRedactor:
         
 
 class runClaudia:
-    def __init__(self,  args, mongo, httpd):
+    def __init__(self,  args, mongo, httpd,  cch):
         print('Run redactor.')
-        cch = ClaudiaCacheHandler('cl_redactor')
+        #cch = ClaudiaCacheHandler('cl_redactor')
         state = {}
         thread = threading.currentThread().getName()
         lock = httpd.mLocks[thread]
@@ -201,17 +201,17 @@ class runClaudia:
 
 
 class redactorTicket:
-    def __init__(self,  args,  mongo, httpd):
+    def __init__(self,  args,  mongo, httpd,  cch):
         thread = threading.currentThread()
         lock = httpd.mLocks[thread.getName()]
         lock.acquire()
-        cch = ClaudiaCacheHandler('cl_redactor')
+        #cch = ClaudiaCacheHandler('cl_redactor')
         ticket = cch.getFreeTicket()
         lock.release()
         self.site = urllib.quote(json.dumps(ticket))
         
 class redactorProgress:
-    def __init__(self,  args,  mongo,  httpd):
+    def __init__(self,  args,  mongo,  httpd,  cch):
         print('progress')
         req = urllib.unquote(args['args'])
         req = json.loads(req)
@@ -223,7 +223,7 @@ class redactorProgress:
         if ticket in httpd.results:
             res = httpd.results[ticket]
             if res['step'] == 'Ready.':
-                cch = ClaudiaCacheHandler('cl_redactor')
+                #cch = ClaudiaCacheHandler('cl_redactor')
                 res = cch.getValue(ticket)
         lock.release()
         if len(str(res)) < 100:
