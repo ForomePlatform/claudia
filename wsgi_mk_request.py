@@ -21,7 +21,7 @@ class ClaudiaService:
         cls.sMain = cls(config, in_container)
 
     @classmethod
-    def request(cls, serv_h, rq_path, rq_args,  mongo,  thread,  httpd):
+    def request(cls, serv_h, rq_path, rq_args,  mongo, httpd):
         lock = threading.RLock()
         if rq_path == "/":
             return serv_h.makeResponse(
@@ -34,7 +34,7 @@ class ClaudiaService:
                 content = claudiaRedactor(rq_args,  mongo,  lock,  httpd).site)
         elif rq_path == "/redactor/run":
             return serv_h.makeResponse(
-                content = runClaudia(rq_args['data'],  mongo, thread, httpd).site)
+                content = runClaudia(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/list":
             return serv_h.makeResponse(
                 content = cardList(rq_args['data'],  mongo,  lock).site)
@@ -52,10 +52,10 @@ class ClaudiaService:
                 content = clearCache(rq_args['data'],  mongo,  lock).site)
         elif rq_path == "/redactor/ticket":
             return serv_h.makeResponse(
-                content = redactorTicket(rq_args['data'],  mongo,  thread,  httpd).site)
+                content = redactorTicket(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/redactor/progress":
             return serv_h.makeResponse(
-                content = redactorProgress(rq_args['data'],  mongo,  lock).site)
+                content = redactorProgress(rq_args['data'],  mongo,  httpd).site)
 
 
         return serv_h.makeResponse(error = 404)

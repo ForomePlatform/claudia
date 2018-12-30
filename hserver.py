@@ -188,7 +188,7 @@ class HServHandler:
                 ret = self.fileResponse(resp_h, file_path, True)
                 if ret is not False:
                     return ret
-            return ClaudiaService.request(resp_h, path, query_args,  mongo, thread, httpd)
+            return ClaudiaService.request(resp_h, path, query_args,  mongo, httpd)
         except Exception:
             rep = StringIO()
             traceback.print_exc(file = rep)
@@ -278,19 +278,18 @@ class MyThreadPool:
             name = 'Thread-' + str(i)
             if name not in httpd.mLocks:
                 httpd.mLocks[name] = lock
-                global thread
-                thread = name
-                print('Start: ' + thread)
+                print('current: ' + str(threading.currentThread().getName()))
+        lock.release()
         self.httpd.serve_forever()
 
 class ThreadServer:
     def __init__(self,  host,  port,  count_of_threads):
         self.countOfThreads = count_of_threads
         self.pool = MyThreadPool(self.countOfThreads,  host,  port)
-        self.results = []
+        self.results = {}
         self.mLocks = {}
-        for thread in self.pool.threads:
-            self.mLocks[thread.getName()] = threading.Lock()
+#        for thread in self.pool.threads:
+#            self.mLocks[thread.getName()] = threading.Lock()
     
     def start(self):
         self.pool.run()
@@ -343,7 +342,7 @@ if __name__ == '__main__':
     #signal(signal.SIGQUIT,  httpd.stop)
     sys.excepthook = httpd.except_hook
     httpd.start()
-    
+    print(threading.enumerate())
 else:
     mongo = connect()
     logging.basicConfig(level = 10)
