@@ -7,12 +7,11 @@ from lxml import etree
 from mongodb import get
 from claudia_interpretator import create_dict_by_doc,  next_step
 from claudia_compilator import start_compilator
-from cache import ClaudiaCacheHandler
 
 
 
 class claudiaRedactor:
-    def __init__(self,  args,  mongo,  lock,  httpd):
+    def __init__(self,  args,  mongo, httpd):
         print('Redactor.')
         computer = socket.gethostname()
         
@@ -55,12 +54,12 @@ class claudiaRedactor:
         
 
 class runClaudia:
-    def __init__(self,  args, mongo, httpd,  cch):
+    def __init__(self,  args, mongo, httpd):
         print('Run redactor.')
-        #cch = ClaudiaCacheHandler('cl_redactor')
         state = {}
-        thread = threading.currentThread().getName()
-        lock = httpd.mLocks[thread]
+#        thread = threading.currentThread().getName()
+#        lock = httpd.mLocks[thread]
+        lock = httpd.mLock
         
         req = urllib.unquote(args['args'])
         req = json.loads(req)
@@ -135,6 +134,7 @@ class runClaudia:
         state['step'] = 'Ready.'
         state['res'] = results
         lock.acquire()
+        cch = httpd.cch
         cch.putValue(ticket,  state)
         lock.release()
         print('state: ' + '<document>')
@@ -201,29 +201,33 @@ class runClaudia:
 
 
 class redactorTicket:
-    def __init__(self,  args,  mongo, httpd,  cch):
-        thread = threading.currentThread()
-        lock = httpd.mLocks[thread.getName()]
+    def __init__(self,  args,  mongo, httpd):
+#        thread = threading.currentThread()
+#        lock = httpd.mLocks[thread.getName()]
+        lock = httpd.mLock
         lock.acquire()
+        cch = httpd.cch
         #cch = ClaudiaCacheHandler('cl_redactor')
         ticket = cch.getFreeTicket()
         lock.release()
         self.site = urllib.quote(json.dumps(ticket))
         
 class redactorProgress:
-    def __init__(self,  args,  mongo,  httpd,  cch):
+    def __init__(self,  args,  mongo,  httpd):
         print('progress')
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         ticket = req['ticket']
-        thread = threading.currentThread().getName()
-        lock = httpd.mLocks[thread]
+#        thread = threading.currentThread().getName()
+#        lock = httpd.mLocks[thread]
+        lock = httpd.mLock
         res = None
         lock.acquire()
         if ticket in httpd.results:
             res = httpd.results[ticket]
             if res['step'] == 'Ready.':
                 #cch = ClaudiaCacheHandler('cl_redactor')
+                cch = httpd.cch
                 res = cch.getValue(ticket)
         lock.release()
         if len(str(res)) < 100:

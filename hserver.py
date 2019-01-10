@@ -66,18 +66,15 @@ class HServHandler:
         return cls.sInstance.processRq(environ, start_response)
 
     def __init__(self, config, in_container):
-        #self.mFileDir = config["files"]
         self.mDirFiles = config["dir-files"]
-        self.mHtmlBase = (config["html-base"]
-            if in_container else None)
+        self.mHtmlBase = config["html-base"]
+       # self.mHtmlBase = (config["html-base"]
+       #     if in_container else None)
         if self.mHtmlBase and self.mHtmlBase.endswith('/'):
             self.mHtmlBase = self.mHtmlBase[:-1]
     
     def checkFilePath(self, path):
         for path_from, path_to in self.mDirFiles:
-            #print('path: ' + path)
-            #print('path_from: ' + path_from)
-            #print('path_to: ' + path_to)
             if path.startswith(path_from):
                 return path_to + path[len(path_from):]
         return None
@@ -189,7 +186,7 @@ class HServHandler:
                 ret = self.fileResponse(resp_h, file_path, True)
                 if ret is not False:
                     return ret
-            return ClaudiaService.request(resp_h, path, query_args,  mongo, httpd,  cch)
+            return ClaudiaService.request(resp_h, path, query_args,  mongo, httpd)
         except Exception:
             rep = StringIO()
             traceback.print_exc(file = rep)
@@ -273,14 +270,14 @@ class MyThreadPool:
             logging.info('Thread ' + str(n) + ': ' + t.getName())
     
     def thread_init(self):
-        lock = threading.Lock()
-        lock.acquire()
-        for i in range(self.num_threads):
-            name = threading.currentThread().getName()
-            if name not in httpd.mLocks:
-                httpd.mLocks[name] = lock
-                print('current: ' + str(threading.currentThread().getName()))
-        lock.release()
+#        lock = threading.Lock()
+#        lock.acquire()
+#        for i in range(self.num_threads):
+#            name = threading.currentThread().getName()
+#            if name not in httpd.mLocks:
+#                httpd.mLocks[name] = lock
+#                print('current: ' + str(threading.currentThread().getName()))
+#        lock.release()
         self.httpd.serve_forever()
 
 class ThreadServer:
@@ -289,7 +286,9 @@ class ThreadServer:
         if host is not None and port is not None:
             self.pool = MyThreadPool(self.countOfThreads,  host,  port)
         self.results = {}
-        self.mLocks = {}
+        self.mLock = threading.Lock()
+        self.cch = ClaudiaCacheHandler('claudia')
+#        self.mLocks = {}
 #        for thread in self.pool.threads:
 #            self.mLocks[thread.getName()] = threading.Lock()
     
@@ -350,6 +349,6 @@ if __name__ == '__main__':
 else:
     mongo = connect()
     cch = ClaudiaCacheHandler('claudia')
-    httpd = ThreadServer(None,  None)
     logging.basicConfig(level = 10)
-    setupHServer("claudia/claudia.json", True)
+    setupHServer("claudia/claudia.json", False)
+    httpd = ThreadServer(None,  None)

@@ -2,9 +2,8 @@ import json
 import urllib
 import socket
 import copy
-from mongodb import get,  put
+from mongodb import get
 from claudia_interpretator import next_step
-from cache import ClaudiaCacheHandler
 
 taxes = [
             'Cardio-Loc', 
@@ -26,12 +25,13 @@ snap_file_name = "tmp/snapshot.json"
 
 # This class generates a HTML-page for a card  
 class showCard:
-    def __init__(self,  args,  mongo,  lock):
+    def __init__(self,  args,  mongo,  httpd):
         computer = socket.gethostname()
         if computer == 'noX540LJ':
             html_file = 'cci/viewer/cards.html'
         else:
             html_file = '/home/andrey/work/Claudia/claudia/cci/viewer/cards.html'
+        lock = httpd.mLock
         lock.acquire()
         html_file = open(html_file,  'r')
         html = html_file.read()
@@ -532,7 +532,7 @@ class showCard:
 #        return
 
 class getInfo:
-    def __init__(self,  args,  mongo,  lock):
+    def __init__(self,  args,  mongo,  httpd):
         state = urllib.unquote(args['args'])
         state = json.loads(state)
         print(json.dumps(state,  indent=4))
@@ -544,8 +544,11 @@ class getInfo:
 #        lock.release()
         
         # Code
+        lock = httpd.mLock
+        lock.acquire()
         code = get("code.cla.json",  formula=state['formula'],  
                                                                 mongo=mongo)
+        lock.release()
         state['code'] = []
         for step in code['source']:
             command = {}
@@ -556,29 +559,37 @@ class getInfo:
             state['code'].append(command)
         
         # Key words
+        lock.acquire()
         state['key_words'] = get('key_words',  number_of_card=state['id'], 
                             dataset=state['ds'],  mongo=mongo)
+        lock.release()
         
         # Initilal document
+        lock.acquire()
         doc = get('doc.html',  number_of_card=state['id'], 
                                             dataset=state['ds'],  mongo=mongo)
+        lock.release()
         state['initial_doc'] = doc
         
         # Annotations
+        lock.acquire()
         doc = get('ch.json',  number_of_card=state['id'], 
                                             dataset=state['ds'],  mongo=mongo)
+        lock.release()
         state['anns'] = doc
         
         # Info
+        lock.acquire()
         info = get('doc.json',  number_of_card=state['id'], 
                                             dataset=state['ds'],  mongo=mongo)
+        lock.release()
         if info is None:
             info = {}
         state['info'] = info
         
         # Ticket
         lock.acquire()
-        cch = ClaudiaCacheHandler('claudia')
+        cch = httpd.cch
         if state['ticket'] != 'admin':
             state['ticket'] = cch.getFreeTicket()
             if state['ticket'] is None:
@@ -592,12 +603,15 @@ class getInfo:
 
 
 class runCode:
-    def __init__(self,  args,  mongo,  lock):
+    def __init__(self,  args,  mongo,  httpd):
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         print('req' + str(req))
+        lock = httpd.mLock
+        lock.acquire()
         code = get("code.cla.json",  formula=req['formula'],  
                                                                 mongo=mongo)
+        lock.release()
         doc = []
         doc_data = {}
         n = 0
@@ -618,18 +632,19 @@ class runCode:
 
 
 class getCode:
-    def __init__(self,  args,  mongo,  lock):
+    def __init__(self,  args,  mongo,  httpd):
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         print('req: '+ str(req))
         
+        lock = httpd.mLock
         lock.acquire()
         if req['ticket'] == 'admin':
             snap_file = open(snap_file_name,  'r')
             doc = json.loads(snap_file.read())
             snap_file.close()
         else:
-            cch = ClaudiaCacheHandler('claudia')
+            cch = httpd.cch
             #print('Locks: ' + str(cch.mch.mLocks))
             doc = cch.getValue(req['ticket'])
             #print('doc: ' + str(doc))
@@ -641,8 +656,10 @@ class getCode:
             doc_data = {}
         else:
             doc_data = doc[-1]
+        lock.acquire()
         code = get("code.cla.json",  formula=req['formula'],  
                                                                 mongo=mongo)
+        lock.release()
         for n in range(len(doc),  req['new_step'] + 1):
             print('Step: '  + str(n))
             doc_data = next_step(doc_data,  code, req['ds'],  req['id'],  
@@ -671,12 +688,13 @@ def anticache(html):
     return html
 
 class clearCache:
-    def __init__(self,  args,  mongo,  lock):
+    def __init__(self,  args,  mongo,  httpd):
         req = urllib.unquote(args['args'])
         req = json.loads(req)
         print('req: ' + str(req))
+        lock = httpd.mLock
         lock.acquire()
-        cch = ClaudiaCacheHandler()
+        cch = httpd.cch
         cch.removeTicket(req['ticket'])
         lock.release()
         self.site = 'Ok.'

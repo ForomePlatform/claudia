@@ -118,5 +118,5 @@ class ClaudiaCacheHandler:
 
 
 if __name__ == '__main__':
-    cch = ClaudiaCacheHandler()
+    cch = ClaudiaCacheHandler('claudia')
     cch.clearCache()

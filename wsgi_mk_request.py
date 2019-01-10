@@ -21,50 +21,50 @@ class ClaudiaService:
         cls.sMain = cls(config, in_container)
 
     @classmethod
-    def request(cls, serv_h, rq_path, rq_args,  mongo, httpd,  cch):
-        thread = threading.currentThread().getName()
-        if thread not in httpd.mLocks:
-            lock = threading.Lock()
-            lock.acquire()
-            httpd.mLocks[thread] = lock
-            lock.release()
-        else:
-            lock = httpd.mLocks[thread]
+    def request(cls, serv_h, rq_path, rq_args,  mongo, httpd):
+#        thread = threading.currentThread().getName()
+#        if thread not in httpd.mLocks:
+#            lock = threading.Lock()
+#            lock.acquire()
+#            httpd.mLocks[thread] = lock
+#            lock.release()
+#        else:
+#            lock = httpd.mLocks[thread]
         if rq_path == "/":
             return serv_h.makeResponse(
-                content = showIndex(rq_args['data'],  mongo,  lock).site)
+                content = showIndex(rq_args['data'],  mongo,  httpd).site)
         elif (rq_path == "/card") and ("id" in rq_args['data']):
             return serv_h.makeResponse(
-                content = showCard(rq_args['data'],  mongo,  lock).site)
+                content = showCard(rq_args['data'],  mongo,  httpd).site)
         elif rq_path == "/redactor":
             return serv_h.makeResponse(
-                content = claudiaRedactor(rq_args,  mongo,  lock,  httpd).site)
+                content = claudiaRedactor(rq_args,  mongo, httpd).site)
         elif rq_path == "/redactor/run":
             return serv_h.makeResponse(
-                content = runClaudia(rq_args['data'],  mongo, httpd,  cch).site)
+                content = runClaudia(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/list":
             return serv_h.makeResponse(
-                content = cardList(rq_args['data'],  mongo,  lock).site)
+                content = cardList(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/card/info":
             return serv_h.makeResponse(
-                content = getInfo(rq_args['data'],  mongo,  lock).site)
+                content = getInfo(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/card/run":
             return serv_h.makeResponse(
-                content = runCode(rq_args['data'],  mongo,  lock).site)
+                content = runCode(rq_args['data'],  mongo,  httpd).site)
         elif rq_path == "/card/code":
             return serv_h.makeResponse(
-                content = getCode(rq_args['data'],  mongo,  lock).site)
+                content = getCode(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/card/clear":
             return serv_h.makeResponse(
-                content = clearCache(rq_args['data'],  mongo,  lock).site)
+                content = clearCache(rq_args['data'],  mongo,  httpd).site)
         elif rq_path == "/redactor/ticket":
             return serv_h.makeResponse(
-                content = redactorTicket(rq_args['data'],  mongo, httpd,  cch).site)
+                content = redactorTicket(rq_args['data'],  mongo, httpd).site)
         elif rq_path == "/redactor/progress":
             return serv_h.makeResponse(
-                content = redactorProgress(rq_args['data'],  mongo,  httpd,  cch).site)
+                content = redactorProgress(rq_args['data'],  mongo,  httpd).site)
 
-
+        print('404. Page not found: ' + rq_path)
         return serv_h.makeResponse(error = 404)
 
     #===============================================
