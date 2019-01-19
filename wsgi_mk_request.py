@@ -10,6 +10,10 @@ from redactor import claudiaRedactor
 from redactor import runClaudia
 from redactor import redactorTicket
 from redactor import redactorProgress
+from new_red import newRedactor
+from new_red import newRunClaudia
+from new_red import newRedactorTicket
+from new_red import newRedactorProgress
 
 #===============================================
 class ClaudiaService:
@@ -63,6 +67,18 @@ class ClaudiaService:
         elif rq_path == "/redactor/progress":
             return serv_h.makeResponse(
                 content = redactorProgress(rq_args['data'],  mongo,  httpd).site)
+        elif rq_path == "/new_red":
+            return serv_h.makeResponse(
+                content = newRedactor(rq_args,  mongo,  httpd).site)
+        elif rq_path == "/new_red/run":
+            return serv_h.makeResponse(
+                content = newRunClaudia(rq_args['data'],  mongo, httpd).site)
+        elif rq_path == "/new_red/ticket":
+            return serv_h.makeResponse(
+                content = newRedactorTicket(rq_args['data'],  mongo, httpd).site)
+        elif rq_path == "/new_red/progress":
+            return serv_h.makeResponse(
+                content = newRedactorProgress(rq_args['data'],  mongo,  httpd).site)
 
         print('404. Page not found: ' + rq_path)
         return serv_h.makeResponse(error = 404)
