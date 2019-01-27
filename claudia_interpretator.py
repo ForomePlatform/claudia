@@ -7,8 +7,19 @@ from mongodb import put
 from mongodb import connect
 from annotators import IsNumericAnnotator,  taxonomy,  RegExpAnnotator
 
+
+formulas = [
+            'CHF', 
+            'MI'
+            ]
+
+def all_formulas(mongo):
+    for formula in formulas:
+        print('Formula: ' + formula)
+        all_datasets(formula,  mongo)
+
 # Apply code to all datasets
-def all_datasets(mongo):
+def all_datasets(formula,  mongo):
     datasets=[
                 'cci', 
                 'nets', 
@@ -16,13 +27,13 @@ def all_datasets(mongo):
                 ]
     for ds in datasets:
         print('DataSet: ' + ds)
-        all_files(ds,  mongo)
+        all_files(ds, formula, mongo)
 
 #  Apply JSON-code for all documents in 'dir.list' and all steps of JSON-code.  
 #  It's independent with 'def all_steps'.
-def all_files(dataset,  mongo):
+def all_files(dataset, formula, mongo):
     chf = []
-    formula = 'CHF'
+    #formula = 'CHF'
     indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     code = get("code.cla.json", formula=formula, mongo=mongo)
     for number_of_card in indexes:
@@ -455,5 +466,5 @@ negation = {
 if __name__ == '__main__':
     mongo = connect()
     #all_files(mongo)
-    all_datasets(mongo)
+    all_formulas(mongo)
     print('Ok.')

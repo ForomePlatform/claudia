@@ -20,6 +20,11 @@ taxes = [
             'METHOD'
             ]
 
+formulas = [
+            'CHF', 
+            'MI'
+            ]
+
 # Connect to MongoDB
 def connect():
     mongo = MongoClient(host="localhost",  port  = 27017, connect=False)
@@ -128,18 +133,21 @@ def update(mongo):
         dbh.taxonomies.update({'taxonomy': tax},  q,  upsert=True)
         print('Update taxonomy "' + tax + '".')
     
-    formula ={}
-    formula['formula'] = 'CHF'
-    formula['version'] = 0
-    formula['hsir'] = get("code.hsir",  from_file=True)
-    formula['json'] = json.dumps(get("code.json",  from_file=True))
-    q = {"$set": {key: formula[key] for key in formula}}
-    dbh.formulas.update({"formula": "CHF"},  formula, upsert=True)
+    
+    # Formulas
+    for f in formulas:
+        formula ={}
+        formula['formula'] = f
+        formula['version'] = '0.0'
+        formula['hsir'] = get("code.hsir",  from_file=True)
+        formula['json'] = json.dumps(get("code.json",  from_file=True))
+        q = {"$set": {key: formula[key] for key in formula}}
+        dbh.formulas.update({"formula": f,  'version': '0.0'},  formula, upsert=True)
     
 
 # Get arbitrary file from the database or form a file (if 'from_file' is True)
 def get(type, number_of_card="0",  taxonomy ="None",  
-            from_file=False, formula="None", base="",  
+            from_file=False, formula="None", version="",  base="",  
             dataset='cci',  mongo=None):
     if from_file:
         if type == "doc.html":
@@ -215,7 +223,10 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 code_file.close()
                 return code
         elif type == "code.cla":
-            code_file_name = dataset + '/claudia_rules/' + formula + '.cla'
+            if version == '':
+                code_file_name = dataset + '/claudia_rules/' + formula + '.cla'
+            else:
+                code_file_name = dataset + '/claudia_rules/' + formula + '_' + version + '.cla'
             code_file_name = base + code_file_name
             try:
                 code_file  = open(code_file_name,  'r')
@@ -323,7 +334,10 @@ def get(type, number_of_card="0",  taxonomy ="None",
             return form["hsir"]
         elif type == "code.cla.json":
             dbh = mongo["claudia"]
-            form = dbh.formulas.find_one({"formula": formula})
+            if version != '':
+                form = dbh.formulas.find_one({"formula": formula, "version": version})
+            else:
+                form = dbh.formulas.find_one({"formula": formula})
             return json.loads(form["cla_json"])
         elif type == "code.json":
             dbh = mongo["claudia"]
@@ -364,7 +378,7 @@ def get(type, number_of_card="0",  taxonomy ="None",
 
 # Put any file to the database
 def put(type, file,  number_of_card="0",  taxonomy="None", 
-                formula="None",  dataset = 'cci',  mongo=None):
+                formula="None", version='',  dataset = 'cci',  mongo=None):
     if type == "doc.html":
         key = 'html'
         dbh = mongo[dataset]
@@ -409,7 +423,7 @@ def put(type, file,  number_of_card="0",  taxonomy="None",
         key = 'cla_json'
         dbh = mongo["claudia"]
         q = {"$set":  {key: json.dumps(file)}}
-        dbh.formulas.update({'formula': formula},  q,  upsert=True)
+        dbh.formulas.update({'formula': formula,  'version': version},  q,  upsert=True)
     elif type == "calculated_indexes":
         key = 'indexes'
         dbh = mongo[dataset]

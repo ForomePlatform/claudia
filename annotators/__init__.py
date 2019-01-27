@@ -55,11 +55,11 @@ def IsNumericAnnotator(text,  mongo):
     result = re.search(r'\d',   text)
     if result is None:
         # There are text only  
-        res = re.search(r'[A-z]+',  text)
-        if res is not None and res.group(0) == text:
-            dict['class'] = 'numeric'
-            dict['type'] = 'text'
-            dict['value'] = text
+#        res = re.search(r'[A-z]+',  text)
+#        if res is not None and res.group(0) == text:
+#            dict['class'] = 'numeric'
+#            dict['type'] = 'text'
+#            dict['value'] = text
         return dict
     dict['class'] = 'numeric'
     # It is a number
