@@ -359,6 +359,14 @@ def get(type, number_of_card="0",  taxonomy ="None",
                 return []
             else:
                 return results[key]
+        elif type.split('.')[0] == "results_apostriory":
+            key = type.split('.')[1]
+            dbh = mongo[dataset]
+            results = dbh.results_apostriory.find_one({"formula": formula},  {key: True})
+            if results is None:
+                return []
+            else:
+                return results[key]
         elif type == "steps.json":
             dbh = mongo[dataset]
             results = dbh.steps.find_one({"formula": formula})
@@ -434,6 +442,11 @@ def put(type, file,  number_of_card="0",  taxonomy="None",
         for key in file:
             q = {"$set":  {key: file[key]}}
             dbh.results_apriory.update({'formula': formula},  q,  upsert=True)
+    elif type == "results_apostriory":
+        dbh = mongo[dataset]
+        for key in file:
+            q = {"$set":  {key: file[key]}}
+            dbh.results_apostriory.update({'formula': formula},  q,  upsert=True)
     elif type == "steps.json":
         key = 'indexes'
         dbh = mongo[dataset]

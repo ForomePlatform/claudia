@@ -13,6 +13,16 @@ formulas = [
             'MI'
             ]
 
+apostriory = [
+            'not mentioned', 
+            'ambiguous',
+            'diagnosed', 
+            'inconclusive', 
+            'ruled out', 
+            'symptoms present', 
+            'other'
+            ]
+
 def all_formulas(mongo):
     for formula in formulas:
         print('Formula: ' + formula)
@@ -33,6 +43,9 @@ def all_datasets(formula,  mongo):
 #  It's independent with 'def all_steps'.
 def all_files(dataset, formula, mongo):
     chf = []
+    apost_res = {}
+    for diag in apostriory:
+        apost_res[diag] = []
     #formula = 'CHF'
     indexes = get("all_indexes", dataset=dataset,  mongo=mongo)
     code = get("code.cla.json", formula=formula, mongo=mongo)
@@ -46,8 +59,14 @@ def all_files(dataset, formula, mongo):
         if doc_data['data']['Formula diagnose'] != 'No':
             chf.append(number_of_card)
             print(doc_data['data']['Formula diagnose'])
+        if 'value' in doc_data['data'] and doc_data['data']['value'] in apostriory:
+            apost_res[doc_data['data']['value']].append(number_of_card)
+        else:
+            apost_res['not mentioned'].append(number_of_card)
     put("calculated_indexes",  chf,  formula=formula,  
                 dataset=dataset,  mongo=mongo)
+    put("results_apostriory",  apost_res,  formula=formula,  mongo=mongo)
+    print('Apostriory: ' + json.dumps(apost_res,  indent=4))
 
 # Apply function 'annotator' for all document of a patient
 #def all_documents(annotator,  doc_data,  old_step,  mongo,  step_id):

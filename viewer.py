@@ -14,9 +14,18 @@ taxes = [
             'MI-Words', 
             'PVD-Words'
             ]
+#apostriory = [
+#            'ICHF', 
+#            'Other'
+#            ]
 apostriory = [
-            'ICHF', 
-            'Other'
+            'not mentioned', 
+            'ambiguous',
+            'diagnosed', 
+            'inconclusive', 
+            'ruled out', 
+            'symptoms present', 
+            'other'
             ]
 apriory = [
             'not mentioned', 
@@ -83,10 +92,10 @@ class cardList:
         lock = httpd.mLock
         lock.acquire()
         ids = get('all_indexes',  dataset=state['ds'],  mongo=mongo)
-        list_apostriory = get('calculated_indexes',  dataset=state['ds'],
-                                            formula=state['formula'],  mongo=mongo)
+#        list_apostriory = get('calculated_indexes',  dataset=state['ds'],
+#                                            formula=state['formula'],  mongo=mongo)
         lock.release()
-        print('apostriory: ' + str(list_apostriory))
+        #print('apostriory: ' + str(list_apostriory))
         need_list = []
         for i in range(len(state['selected_cells'])):
             lock.acquire()
@@ -95,13 +104,20 @@ class cardList:
             print('Apriory (' + apriory[i] + '): ' + str(ids3))
             lock.release()
             for j in range(len(state['selected_cells'][i])):
-                if apostriory[j] == 'Other':
-                    ids2 = difference(ids,  list_apostriory)
-                else:
-                    ids2 = list_apostriory
+                #if apostriory[j] == 'Other':
+                lock.acquire()
+                list_apostriory = get('results_apostriory.' + apostriory[j], dataset=state['ds'], 
+                                            formula=state['formula'],  mongo=mongo)
+                print('Apostriory (' + apostriory[j] + '): ' + str(list_apostriory))
+                lock.release()
+#                if apostriory[j] == 'Other':
+#                    ids2 = difference(ids,  list_apostriory)
+#                else:
+#                    ids2 = list_apostriory
                 if state['ds'] != 'cci':
                     ids3 = ids
-                list = intersection(ids2,  ids3)
+                #list = intersection(ids2,  ids3)
+                list = intersection(list_apostriory,  ids3)
                 if state['selected_cells'][i][j]['selected']:
                     need_list = union(need_list,  list)
                 state['selected_cells'][i][j]['count'] = len(list)
