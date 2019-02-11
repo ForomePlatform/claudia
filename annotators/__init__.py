@@ -49,10 +49,27 @@ def taxonomy(text,  tax,  mongo):
 
 #  Apply numeric annotator for chunk 'text'. 'Par' is a tiple of parameters.  
 def IsNumericAnnotator(text,  mongo):
-    #mongo=par[0]
     dict = {}
+    # Find a measure
+    tax_file = get("tax.tset", taxonomy="DOSAGE", mongo=mongo).split('\n')
+    filtre = re.compile("\s+", re.M + re.I + re.U)
+    for line in tax_file:
+        if line == "" or line[0] != '"':
+            continue
+        words = line.split('"')
+        #end = result.end()
+        triped_text = filtre.sub(' ',  text)
+        triped_word = filtre.sub(' ',  words[1])
+        #if is_word(triped_word,  triped_text):
+        pos = triped_text.find(triped_word)
+        neib = triped_text[pos-1:pos] + triped_text[pos + len(triped_word) : pos+1 + len(triped_word)]
+        nn = re.findall(r'[A-z]',  neib)
+        if pos != -1 and nn == []:
+            #print('Triped_text: ' + triped_text + ', triped_word: ' + triped_word)
+            dict['measure'] = triped_word
+    
     # In 'text' there is a number  
-    result = re.search(r'\d',   text)
+    result = re.search(r"[-+]?\d*\.\d+|\d+",   text)
     if result is None:
         # There are text only  
 #        res = re.search(r'[A-z]+',  text)
@@ -70,19 +87,8 @@ def IsNumericAnnotator(text,  mongo):
     #  It's not a number but contains a number  
     else:
         dict['type'] = 'contains_number'
-        dict['value'] = result.group(0)
-        # Find a measure
-        tax_file = get("tax.tset", taxonomy="DOSAGE", mongo=mongo).split('\n')
-        filtre = re.compile("\s+", re.M + re.I + re.U)
-        for line in tax_file:
-            if line == "" or line[0] != '"':
-                continue
-            words = line.split('"')
-            end = result.end()
-            triped_text = filtre.sub(' ',  text[end:])
-            triped_word = filtre.sub(' ',  words[1])
-            if is_word(triped_word,  triped_text):
-                dict['measure'] = triped_word
+        dict['value'] = float(result.group(0))
+        #print('INA: text=' + text + ', number=' + str(result.group(0)))
         return dict
 
 #  Apply regular expression 'pattern' for 'text'.  

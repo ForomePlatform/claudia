@@ -65,7 +65,7 @@ def all_files(dataset, formula, mongo):
             apost_res['not mentioned'].append(number_of_card)
     put("calculated_indexes",  chf,  formula=formula,  
                 dataset=dataset,  mongo=mongo)
-    put("results_apostriory",  apost_res,  formula=formula,  mongo=mongo)
+    put("results_apostriory",  apost_res,  formula=formula, dataset=dataset, mongo=mongo)
     print('Apostriory: ' + json.dumps(apost_res,  indent=4))
 
 # Apply function 'annotator' for all document of a patient
@@ -196,16 +196,17 @@ def reject(data,  step,  step_id):
 
 #  Conditional operator: if ... then ... .
 def statement(data,  step,  mongo,  step_id):
+    #print('Statement args: ' + json.dumps(step['args'],  indent=4))
     cond = condition(data, step['condition'],  step['args'])
     if cond:
         if step_id in step['steps_if'] or step_id == -1:
             for new_step in step['action_if']:
-                return one_step(data,  new_step,  mongo,  step_id)
+                one_step(data,  new_step,  mongo,  step_id)
     else:
         if 'action_else' in step:
             if step_id in step['steps_else'] or step_id == -1:
                 for new_step in step['action_else']:
-                    return one_step(data,  new_step,  mongo,  step_id)
+                    one_step(data,  new_step,  mongo,  step_id)
 
 #  Conditional operator 'if'. See 'def statement'.  
 def condition(data,  cond,  args):
