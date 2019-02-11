@@ -618,6 +618,7 @@ def compilator(lines,  old_vars,  source_id,  old_source,  annotations):
     response['line'] = n
     response['source'] = source
     response['steps'] = steps
+    response['annotations'] = annotations
     return response
 
 negation = {
@@ -659,6 +660,7 @@ def start_compilator(claudia,  claudia_file_name):
         code['statements'] = ret['action']
         code['source'] = ret['source']
         code['count_of_steps'] = len(ret['steps'])
+        #code['annotations'] = ret['annotations']
         for source in code['source']:
             #print('source-id: ' + str(source['source_id']))
             while source['text'].find('  ') != -1:

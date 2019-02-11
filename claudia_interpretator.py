@@ -77,6 +77,8 @@ def all_files(dataset, formula, mongo):
 #  Apply function 'annotator' for all sentence of a document.  
 def all_sentences(annotator,  doc_data,  old_step,  mongo,  step_id):
     for sentence in doc_data['sentences']:
+        if 'reject' in sentence['data']:
+            continue
         step = copy.deepcopy(old_step)
         annotator(sentence,  step,  mongo,  step_id)
 
@@ -84,6 +86,8 @@ def all_sentences(annotator,  doc_data,  old_step,  mongo,  step_id):
 def all_chunks(annotator, doc_data, old_step,  mongo,  step_id):
     for sentence  in doc_data['sentences']:
         for chunk in sentence['chunks']:
+            if 'reject' in chunk['data']:
+                continue
             step = copy.deepcopy(old_step)
             annotator(chunk,  step,  mongo,  step_id)
 
@@ -250,6 +254,11 @@ def annotated(data,  cond,  args):
         if arg['type'] == 'key':
             if arg['value'] in data['data']:
                 res = True
+            elif arg['value'] == 'NUMERIC':
+                if 'class' in data['data'] and data['data']['class'] == 'numeric':
+                    res = True
+                else:
+                    res = False
             else:
                 res = False
             for ann in cond['a']:
@@ -261,13 +270,15 @@ def annotated(data,  cond,  args):
     else:
         #print('chunk cond: ' + str(cond))
         for chunk in data[set]:
+            if 'reject' in chunk['data']:
+                continue
             new_args = copy.deepcopy(args)
             new_cond = copy.deepcopy(cond)
             #print('args before: ' + str(new_args))
             arg = new_args[0]
             new_args.pop(0)
             if arg['type'] == 'key':
-                if arg['value'] in chunk['data']:
+                if arg['value'] in chunk['data'] or arg['value'] == 'NUMERIC':
                     res = True
                 else:
                     res = False
@@ -343,6 +354,18 @@ def equals(data,  cond,  args):
         #print('chunk: ' + data['text'] + ', negation: ' + str(data['data']['__negation']))
         neg = int(data['data']['__negation'])
         res = (neg >= negation[context]['min'] and neg <= negation[context]['max'])
+        return res
+    elif args[0]['value'] == 'less_than':
+        value = args[1]['value']
+        args.pop(0)
+        args.pop(0)
+        res = ('value' in data['data']) and (data['data']['value'] <= value)
+        return res
+    elif args[0]['value'] == 'great_than':
+        value = args[1]['value']
+        args.pop(0)
+        args.pop(0)
+        res = ('value' in data['data']) and (data['data']['value'] >= value)
         return res
     a = condition(data,  cond[0],  args)
     b = condition(data,  cond[1],  args)

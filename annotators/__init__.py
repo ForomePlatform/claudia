@@ -80,9 +80,10 @@ def IsNumericAnnotator(text,  mongo):
         return dict
     dict['class'] = 'numeric'
     # It is a number
-    if re.search(r'[A-z]',  text) is None:
+    #if re.search(r'[A-z]',  text) is None:
+    if result.group(0) == text:
         dict['type'] = 'number'
-        dict['value'] = text
+        dict['value'] = float(result.group(0))
         return dict
     #  It's not a number but contains a number  
     else:
