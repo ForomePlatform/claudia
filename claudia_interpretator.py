@@ -248,82 +248,91 @@ def annotated(data,  cond,  args):
         set = 'chunks'
     else:
         set = 'text'
-    if set == 'text':
-        arg = args[0]
-        args.pop(0)
-        if arg['type'] == 'key':
-            if arg['value'] in data['data']:
-                res = True
-            elif arg['value'] == 'NUMERIC':
-                if 'class' in data['data'] and data['data']['class'] == 'numeric':
-                    res = True
-                else:
-                    res = False
-            else:
-                res = False
-            for ann in cond['a']:
-                res = condition(data,  ann,  args) and res
-            return res
-        else:
-            print('Unknown type: ' + arg['type'])
-            sys.exit(8)
-    else:
+#    if set == 'text':
+#        arg = args[0]
+#        args.pop(0)
+#        if arg['type'] == 'key':
+#            if arg['value'] in data['data']:
+#                res = True
+#            elif arg['value'] == 'NUMERIC':
+#                if 'class' in data['data'] and data['data']['class'] == 'numeric':
+#                    res = True
+#                else:
+#                    res = False
+#            else:
+#                res = False
+#            for ann in cond['a']:
+#                res = condition(data,  ann,  args) and res
+#            return res
+#        else:
+#            print('Unknown type: ' + arg['type'])
+#            sys.exit(8)
+#    else:
+
         #print('chunk cond: ' + str(cond))
+    res = False
+    new_args = copy.deepcopy(args)
+    new_cond = copy.deepcopy(cond)
+    res = annotated_chunk(data,  new_cond,  new_args)
+    if not res and set != 'text':
         for chunk in data[set]:
             if 'reject' in chunk['data']:
                 continue
             new_args = copy.deepcopy(args)
             new_cond = copy.deepcopy(cond)
+            res = annotated_chunk(chunk,  new_cond,  new_args)
+            if res:
+                break
             #print('args before: ' + str(new_args))
-            arg = new_args[0]
-            new_args.pop(0)
-            if arg['type'] == 'key':
-                if arg['value'] in chunk['data'] or arg['value'] == 'NUMERIC':
-                    res = True
-                else:
-                    res = False
-                for ann in new_cond['a']:
-                    #print('ann: ' + json.dumps(ann,  indent=4))
-                    #print('new_args: ' + json.dumps(new_args,  indent=4))
-                    res = condition(chunk,  ann,  new_args) and res
-                if res:
-                    args.pop(0)
-                    for ann in new_cond['a']:
-                        args.pop(0)
-                        args.pop(0)
-                    return True
-            else:
-                print('Unknown type: ' + arg['type'])
-                sys.exit(11)
-#            if annotated(chunk,  new_cond,  new_args):
-#                args.pop(0)
-#                for ann in new_cond['a']:
-#                    args.pop(0)
-#                    args.pop(0)
-#                return True
-        args.pop(0)
-        for ann in cond['a']:
-            args.pop(0)
-            args.pop(0)
-        return False
-#        sys.exit()
-#        n = 0
-#        for chunk in data[set]:
-#            new_args = copy.deepcopy(args)
 #            arg = new_args[0]
 #            new_args.pop(0)
 #            if arg['type'] == 'key':
-#                if arg['value'] in data['data']:
+#                if arg['value'] in chunk['data'] or arg['value'] == 'NUMERIC':
 #                    res = True
 #                else:
 #                    res = False
-#                for ann in cond['a']:
-#                    if new_args[0] == 'count':
-#                    res = condition(data,  ann,  args) and res
-#                return res
+#                for ann in new_cond['a']:
+#                    #print('ann: ' + json.dumps(ann,  indent=4))
+#                    #print('new_args: ' + json.dumps(new_args,  indent=4))
+#                    res = condition(chunk,  ann,  new_args) and res
+#                if res:
+#                    args.pop(0)
+#                    for ann in new_cond['a']:
+#                        args.pop(0)
+#                        args.pop(0)
+#                    return True
 #            else:
 #                print('Unknown type: ' + arg['type'])
-#                sys.exit(8)
+#                sys.exit(11)
+
+    args.pop(0)
+    for ann in cond['a']:
+        args.pop(0)
+        args.pop(0)
+    return res
+
+def annotated_chunk(chunk,  new_cond,  new_args):
+    arg = new_args[0]
+    new_args.pop(0)
+    if arg['type'] == 'key':
+        if arg['value'] in chunk['data'] or arg['value'] == 'NUMERIC':
+            res = True
+        else:
+            res = False
+        for ann in new_cond['a']:
+            #print('ann: ' + json.dumps(ann,  indent=4))
+            #print('new_args: ' + json.dumps(new_args,  indent=4))
+            res = condition(chunk,  ann,  new_args) and res
+#        if res:
+#            args.pop(0)
+#            for ann in new_cond['a']:
+#                args.pop(0)
+#                args.pop(0)
+#            return True
+        return res
+    else:
+        print('Unknown type: ' + arg['type'])
+        sys.exit(11)
 
 
 #  'And'
@@ -348,6 +357,8 @@ def negative(data,  cond,  args):
 #  '='
 def equals(data,  cond,  args):
     if args[0]['value'] == 'context':
+        if 'text' not in data:
+            return False
         context = args[1]['value']
         args.pop(0)
         args.pop(0)
@@ -356,12 +367,16 @@ def equals(data,  cond,  args):
         res = (neg >= negation[context]['min'] and neg <= negation[context]['max'])
         return res
     elif args[0]['value'] == 'less_than':
+        if 'text' not in data:
+            return False
         value = args[1]['value']
         args.pop(0)
         args.pop(0)
         res = ('value' in data['data']) and (data['data']['value'] <= value)
         return res
     elif args[0]['value'] == 'great_than':
+        if 'text' not in data:
+            return False
         value = args[1]['value']
         args.pop(0)
         args.pop(0)
