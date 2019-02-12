@@ -47,14 +47,16 @@ for sentence in collection.sentences():
             sentence.annotate(CHF_Related,
                 value = "diagnosed", diagnosis = "HF")
 
-       if sentence.annotated(CHF_Entity, context = "negative"):
-        if not sentence.annotated(CHF-Words, procedure = "CXR"):
+       if sentence.annotated(CHF_Entity, context = "negative") and
+        not sentence.annotated(CHF-Words, procedure = "CXR"):
             ## 9
             sentence.annotate(CHF_Related, value = "negated")
-        if sentence.annotated(CHF-Words, condition = "CD"):
+       if sentence.annotated(CHF-Words, context = "negative") and
+        sentence.annotated(CHF-Words, condition = "CD"):
             ## 10
             sentence.annotate(CHF_Related, value = "negated")
-        if sentence.annotated(CHF-Words, procedure = "CXR"):
+       if sentence.annotated(CHF_Entity, context = "negative") and
+        sentence.annotated(CHF-Words, procedure = "CXR"):
             ## 11
             sentence.annotate(CHF_Related, value = "uncertain")
 

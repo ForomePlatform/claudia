@@ -655,7 +655,7 @@ def start_compilator(claudia,  claudia_file_name):
     else:
         code = {}
         code['rulename'] = claudia_file_name
-        code['version'] = '0.0'
+        code['version'] = '0.1'
         code['declarations'] = negation
         code['statements'] = ret['action']
         code['source'] = ret['source']

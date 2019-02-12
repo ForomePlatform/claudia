@@ -54,11 +54,11 @@ IMI = collection.defineAnnotation("IMI", value={"diagnosed",
 for document in collection.documents():
 
     if document.annotated(MI_Related, diagnosis="MI")
-                 and document.annotated(MI_Related, value="negated", equals=0):
+                 and not document.annotated(MI_Related, value="negated"):
         document.annotate(IMI, value="diagnosed")
 
     if document.annotated(MI_Related, value="negated"):
-        if document.annotated(MI_Related, value="diagnosed", equals=0):
+        if not document.annotated(MI_Related, value="diagnosed"):
             document.annotate(IMI, value="ruled_out")
         else:
             document.annotate(IMI, value="ambiguous")

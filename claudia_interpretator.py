@@ -148,7 +148,8 @@ def apply_tax(chunk,  step,  mongo,  step_id):
     if step['options']['name'] == 'RegExp':
         new_dict = RegExpAnnotator(chunk['text'], step['options']['pattern'])
         key = step['options']['var']
-        new_dict[key] = key
+        if 'pattern' in new_dict:
+            new_dict[key] = key
         chunk['data'].update(new_dict)
         return
     for tax in step['options']['values']:
@@ -524,5 +525,8 @@ negation = {
 if __name__ == '__main__':
     mongo = connect()
     #all_files(mongo)
-    all_formulas(mongo)
+    if len(sys.argv)>1 and sys.argv[1] in formulas:
+        all_datasets(sys.argv[1],  mongo)
+    else:
+        all_formulas(mongo)
     print('Ok.')
