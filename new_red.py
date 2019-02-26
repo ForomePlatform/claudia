@@ -186,9 +186,9 @@ class newRunClaudia:
             lock.release()
             q_source = "java -jar /data/projects/Claudia/lib/hsconnector.jar"
             q = q_source + " < " + in_file_name + " > " + out_file_name
+            lock.acquire()
             #out,  err = subprocess.Popen(q + in_file_name, stdout=subprocess.PIPE, shell=True).communicate()
             os.system(q)
-            lock.acquire()
             out_file = open(out_file_name,  'r')
             out = out_file.read()
             out_file.close()
