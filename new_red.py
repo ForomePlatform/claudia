@@ -177,8 +177,8 @@ class newRunClaudia:
         if computer == 'noX540LJ':
             return text
         else:
-            in_file_name = 'tmp/text.txt'
-            out_file_name = 'tmp/chunks.html'
+            in_file_name = '/data/projects/Claudia/claudia/tmp/text.txt'
+            out_file_name = '/data/projects/Claudia/claudia/tmp/chunks.html'
             lock.acquire()
             in_file = open(in_file_name,  'w')
             in_file.write(text)

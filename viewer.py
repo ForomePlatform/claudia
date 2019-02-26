@@ -101,14 +101,14 @@ class cardList:
             lock.acquire()
             ids3 = get('results_apriory.' + apriory[i], dataset=state['ds'], 
                                             formula=state['formula'],  mongo=mongo)
-            print('Apriory (' + apriory[i] + '): ' + str(ids3))
+            #print('Apriory (' + apriory[i] + '): ' + str(ids3))
             lock.release()
             for j in range(len(state['selected_cells'][i])):
                 #if apostriory[j] == 'Other':
                 lock.acquire()
                 list_apostriory = get('results_apostriory.' + apostriory[j], dataset=state['ds'], 
                                             formula=state['formula'],  mongo=mongo)
-                print('Apostriory (' + apostriory[j] + '): ' + str(list_apostriory))
+                #print('Apostriory (' + apostriory[j] + '): ' + str(list_apostriory))
                 lock.release()
 #                if apostriory[j] == 'Other':
 #                    ids2 = difference(ids,  list_apostriory)
